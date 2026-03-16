@@ -7,6 +7,7 @@ MCP 协议服务器
 import asyncio
 import json
 import logging
+from datetime import datetime
 from typing import Dict, Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
@@ -397,26 +398,31 @@ class MCPServer:
 mcp_server = MCPServer()
 
 
-@router.websocket("/ws/{client_type}/{client_id}")
+@router.websocket("/ws/{client_type}")
 async def websocket_endpoint(
     websocket: WebSocket,
     client_type: str,
-    client_id: str,
 ):
     """WebSocket 端点用于 MCP 协议通信
 
+    简化版本，无需API密钥认证，仅验证客户端类型
+    
     Args:
         websocket: WebSocket 连接
         client_type: 客户端类型 ("planner" 或 "executor")
-        client_id: 客户端 ID
     """
     # 验证客户端类型
     if client_type not in ["planner", "executor"]:
         await websocket.close(code=1008, reason="Invalid client type")
         return
 
+    # 生成简单的客户端ID
+    import uuid
+    client_id = f"{client_type}_{uuid.uuid4().hex[:8]}"
+
     # 连接客户端
     await mcp_server.connect(websocket, client_type, client_id)
+    logger.info(f"新客户端连接: {client_id} ({client_type})")
 
     try:
         while True:
@@ -485,3 +491,48 @@ async def submit_task_result_via_http(task_id: str):
         status_code=501,
         detail="HTTP 端点尚未实现，请使用 WebSocket 接口",
     )
+
+
+@router.get("/info")
+async def get_mcp_info():
+    """获取 MCP 服务器信息
+    
+    返回当前 MCP 服务器的配置和状态信息
+    """
+    return {
+        "service": "CodeMCP MCP Server",
+        "version": "1.0",
+        "protocol": "MCP (Model Context Protocol)",
+        "authentication": "none (simplified)",
+        "endpoints": {
+            "websocket": "/mcp/ws/{client_type}",
+            "client_types": ["planner", "executor"],
+            "info": "/mcp/info",
+            "health": "/mcp/health"
+        },
+        "active_connections": len(mcp_server.active_connections),
+        "connection_types": mcp_server.connection_types
+    }
+
+
+@router.get("/health")
+async def health_check():
+    """MCP 服务器健康检查"""
+    return {
+        "status": "healthy",
+        "service": "mcp-server",
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@router.post("/test/echo")
+async def test_echo(message: dict):
+    """测试端点：回显消息
+    
+    用于测试 MCP 服务器的基本功能
+    """
+    return {
+        "echo": message,
+        "received_at": datetime.now().isoformat(),
+        "server": "codemcp-mcp-server"
+    }

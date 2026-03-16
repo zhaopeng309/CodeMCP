@@ -70,16 +70,42 @@ MCP（Model Context Protocol）是 CodeMCP 系统中 Planner 和 Executor 与 Ga
 }
 ```
 
-## 认证与授权
+## 连接与认证
 
-### API 密钥认证
+### 简化连接（无需认证）
+CodeMCP MCP 服务器采用简化连接方式，无需 API 密钥认证，仅需指定客户端类型。
+
+#### WebSocket 连接
+```
+ws://localhost:8000/mcp/ws/{client_type}
+```
+
+其中 `client_type` 为：
+- `planner` - 规划器客户端
+- `executor` - 执行器客户端
+
+#### 连接示例
 ```python
-# 请求头
-headers = {
-    "Authorization": "Bearer {api_key}",
-    "X-MCP-Role": "planner",  # 或 "executor"
-    "X-MCP-Version": "1.0",
-}
+import asyncio
+import websockets
+import json
+
+async def connect_mcp():
+    # 连接到 MCP 服务器
+    async with websockets.connect("ws://localhost:8000/mcp/ws/planner") as websocket:
+        print("Connected to MCP server")
+        
+        # 发送 Ping 消息
+        ping_message = {
+            "message_id": "test-001",
+            "message_type": "ping",
+            "source": "test-client",
+            "destination": "server"
+        }
+        
+        await websocket.send(json.dumps(ping_message))
+        response = await websocket.recv()
+        print(f"Response: {response}")
 ```
 
 ### 角色权限
@@ -87,6 +113,18 @@ headers = {
 |------|------|
 | Planner | 创建计划、查询状态、重新规划 |
 | Executor | 获取任务、提交结果、查询任务详情 |
+
+### 服务器信息端点
+```
+GET /mcp/info
+```
+返回服务器配置和状态信息。
+
+### 健康检查端点
+```
+GET /mcp/health
+```
+检查服务器健康状态。
 
 ## Planner 接口
 
@@ -477,7 +515,35 @@ headers = {
 
 ### 连接建立
 ```
-ws://localhost:8000/mcp/ws?role=planner&api_key=xxx
+ws://localhost:8000/mcp/ws/{client_type}
+```
+
+其中 `client_type` 为：
+- `planner` - 规划器客户端
+- `executor` - 执行器客户端
+
+#### 连接示例
+```python
+import asyncio
+import websockets
+import json
+
+async def connect_as_planner():
+    # 作为规划器连接
+    async with websockets.connect("ws://localhost:8000/mcp/ws/planner") as ws:
+        # 发送消息
+        message = {
+            "jsonrpc": "2.0",
+            "id": "test-001",
+            "method": "mcp.planner.create_plan",
+            "params": {
+                "system_id": 1,
+                "plan_name": "测试计划"
+            }
+        }
+        await ws.send(json.dumps(message))
+        response = await ws.recv()
+        print(f"响应: {response}")
 ```
 
 ### 事件订阅
