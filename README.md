@@ -119,19 +119,54 @@ chmod +x start.sh
 ./start.sh --clean
 ```
 
+#### 使用命令行工具包装器（推荐）
+项目提供了多个命令行工具包装器，位于 `bin/` 目录下，方便直接使用：
+
+```bash
+# 给予执行权限（首次使用）
+chmod +x bin/*
+
+# 交互式控制台（提示符为 code_shell>）
+./bin/code_shell
+
+# 启动API服务器
+./bin/codemcp-server --host 0.0.0.0 --port 8000 --reload
+
+# 数据库管理
+./bin/codemcp-db init      # 初始化数据库
+./bin/codemcp-db check     # 检查数据库连接
+./bin/codemcp-db migrate   # 运行数据库迁移
+
+# 通用CLI（无参数时启动交互式控制台）
+./bin/codemcp              # 启动交互式控制台
+./bin/codemcp monitor      # 监控模式
+./bin/codemcp status       # 查看系统状态
+
+# 开发工具
+./bin/codemcp-dev test     # 运行测试
+./bin/codemcp-dev lint     # 代码检查
+./bin/codemcp-dev format   # 代码格式化
+```
+
 #### 启动 Gateway 服务器
 ```bash
-# 方式一：使用内置命令
+# 方式一：使用包装器脚本（推荐）
+./bin/codemcp-server --host 0.0.0.0 --port 8000 --reload
+
+# 方式二：使用内置命令
 codemcp-server
 
-# 方式二：直接运行
+# 方式三：直接运行
 uvicorn codemcp.api.server:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 #### 使用 Console CLI
 ```bash
-# 启动交互式控制台
-codemcp
+# 启动交互式控制台（使用包装器）
+./bin/code_shell
+
+# 或使用通用CLI
+./bin/codemcp
 
 # 实时监控
 codemcp monitor --follow

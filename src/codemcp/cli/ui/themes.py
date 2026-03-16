@@ -37,14 +37,21 @@ def get_theme_style():
         "log.empty": "#888888 italic",
         
         # 指标样式
-        "metric.任务引擎": "#00ff00",
-        "metric.窗口大小": "#00ffff",
-        "metric.运行中任务": "#ffff00",
-        "metric.等待队列": "#ffaa00",
-        "metric.可用槽位": "#00ff00",
+        "metric.task_engine": "#00ff00",
+        "metric.window_size": "#00ffff",
+        "metric.running_tasks": "#ffff00",
+        "metric.waiting_queue": "#ffaa00",
+        "metric.available_slots": "#00ff00",
         
         # 监控样式
         "monitor": "#cccccc",
+        
+        # Help样式
+        "help": "#cccccc",
+        "help.frame": "bg:#2a2a2a #ffffff",
+        "help.item": "#00ffff",
+        "help.command": "#ffff00",
+        "help.text": "#cccccc",
         
         # 输入样式
         "input": "bg:#2d2d2d #ffffff",
@@ -106,11 +113,11 @@ def get_monokai_theme():
         "log": "#f8f8f2",
         "log.empty": "#75715e italic",
         
-        "metric.任务引擎": "#a6e22e",
-        "metric.窗口大小": "#66d9ef",
-        "metric.运行中任务": "#fd971f",
-        "metric.等待队列": "#ae81ff",
-        "metric.可用槽位": "#a6e22e",
+        "metric.task_engine": "#a6e22e",
+        "metric.window_size": "#66d9ef",
+        "metric.running_tasks": "#fd971f",
+        "metric.waiting_queue": "#ae81ff",
+        "metric.available_slots": "#a6e22e",
         
         "input": "bg:#3e3d32 #f8f8f2",
         "input.frame": "bg:#49483e #f8f8f2",

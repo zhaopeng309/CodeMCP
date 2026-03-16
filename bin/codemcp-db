@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+"""
+CodeMCP 数据库管理工具
+
+数据库初始化、迁移和管理命令。
+"""
+
+import sys
+import os
+import asyncio
+import argparse
+
+# 添加项目根目录到Python路径
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
+from src.codemcp.database.session import init_db, close_db
+from src.codemcp.config import settings
+
+
+def print_header(title: str):
+    """打印标题"""
+    print("=" * 60)
+    print(f"CodeMCP 数据库管理 - {title}")
+    print("=" * 60)
+
+
+async def init_database():
+    """初始化数据库"""
+    print_header("初始化数据库")
+    print(f"数据库URL: {settings.database_url}")
+    
+    try:
+        await init_db()
+        print("✓ 数据库初始化成功")
+        return True
+    except Exception as e:
+        print(f"✗ 数据库初始化失败: {e}")
+        return False
+
+
+async def check_database():
+    """检查数据库连接"""
+    print_header("检查数据库连接")
+    print(f"数据库URL: {settings.database_url}")
+    
+    try:
+        # 尝试导入并检查数据库
+        from sqlalchemy.ext.asyncio import AsyncSession
+        from src.codemcp.database.session import AsyncSessionFactory
+        
+        async with AsyncSessionFactory() as session:
+            # 执行一个简单的查询来测试连接
+            from sqlalchemy import text
+            result = await session.execute(text("SELECT 1"))
+            value = result.scalar()
+            
+            if value == 1:
+                print("✓ 数据库连接正常")
+                return True
+            else:
+                print("✗ 数据库连接测试失败")
+                return False
+                
+    except Exception as e:
+        print(f"✗ 数据库连接失败: {e}")
+        return False
+
+
+def run_migrations():
+    """运行数据库迁移"""
+    print_header("运行数据库迁移")
+    
+    try:
+        # 使用alembic运行迁移
+        import subprocess
+        result = subprocess.run(
+            ["alembic", "upgrade", "head"],
+            cwd=project_root,
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode == 0:
+            print("✓ 数据库迁移成功")
+            print(result.stdout)
+            return True
+        else:
+            print("✗ 数据库迁移失败")
+            print(result.stderr)
+            return False
+            
+    except Exception as e:
+        print(f"✗ 运行迁移失败: {e}")
+        return False
+
+
+def create_migration(message: str):
+    """创建新的迁移"""
+    print_header("创建数据库迁移")
+    
+    if not message:
+        print("✗ 请提供迁移描述信息")
+        return False
+    
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["alembic", "revision", "--autogenerate", "-m", message],
+            cwd=project_root,
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode == 0:
+            print("✓ 迁移文件创建成功")
+            print(result.stdout)
+            return True
+        else:
+            print("✗ 迁移文件创建失败")
+            print(result.stderr)
+            return False
+            
+    except Exception as e:
+        print(f"✗ 创建迁移失败: {e}")
+        return False
+
+
+def show_migration_history():
+    """显示迁移历史"""
+    print_header("迁移历史")
+    
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["alembic", "history"],
+            cwd=project_root,
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode == 0:
+            print(result.stdout)
+            return True
+        else:
+            print("✗ 获取迁移历史失败")
+            print(result.stderr)
+            return False
+            
+    except Exception as e:
+        print(f"✗ 获取迁移历史失败: {e}")
+        return False
+
+
+def main():
+    """主函数"""
+    parser = argparse.ArgumentParser(description="CodeMCP 数据库管理工具")
+    
+    subparsers = parser.add_subparsers(dest="command", help="可用命令")
+    
+    # init 命令
+    init_parser = subparsers.add_parser("init", help="初始化数据库")
+    
+    # check 命令
+    check_parser = subparsers.add_parser("check", help="检查数据库连接")
+    
+    # migrate 命令
+    migrate_parser = subparsers.add_parser("migrate", help="运行数据库迁移")
+    
+    # create-migration 命令
+    create_parser = subparsers.add_parser("create-migration", help="创建新的迁移")
+    create_parser.add_argument("message", help="迁移描述信息")
+    
+    # history 命令
+    history_parser = subparsers.add_parser("history", help="显示迁移历史")
+    
+    # 如果没有提供命令，显示帮助
+    if len(sys.argv) == 1:
+        parser.print_help()
+        return
+    
+    args = parser.parse_args()
+    
+    if args.command == "init":
+        success = asyncio.run(init_database())
+        sys.exit(0 if success else 1)
+        
+    elif args.command == "check":
+        success = asyncio.run(check_database())
+        sys.exit(0 if success else 1)
+        
+    elif args.command == "migrate":
+        success = run_migrations()
+        sys.exit(0 if success else 1)
+        
+    elif args.command == "create-migration":
+        success = create_migration(args.message)
+        sys.exit(0 if success else 1)
+        
+    elif args.command == "history":
+        success = show_migration_history()
+        sys.exit(0 if success else 1)
+        
+    else:
+        parser.print_help()
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

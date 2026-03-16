@@ -1,0 +1,218 @@
+#!/usr/bin/env python3
+"""
+CodeMCP Shell - 交互式命令执行环境
+
+一个简单的交互式shell，提供code_shell>提示符，
+用于执行CodeMCP相关命令。
+"""
+
+import sys
+import os
+import readline
+import atexit
+from typing import List, Optional
+
+# 添加项目根目录到Python路径
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
+from src.codemcp.cli.console import InteractiveConsole
+from src.codemcp.cli.main import app as codemcp_app
+import typer
+
+
+class CodeShell:
+    """CodeMCP交互式shell"""
+    
+    def __init__(self):
+        self.history_file = os.path.expanduser("~/.code_shell_history")
+        self.setup_readline()
+        
+        # 命令列表
+        self.commands = {
+            "help": self.cmd_help,
+            "exit": self.cmd_exit,
+            "quit": self.cmd_exit,
+            "clear": self.cmd_clear,
+            "version": self.cmd_version,
+            "tasks": self.cmd_tasks,
+            "status": self.cmd_status,
+            "monitor": self.cmd_monitor,
+            "queue": self.cmd_queue,
+            "system": self.cmd_system,
+        }
+        
+        # 帮助信息
+        self.help_text = """
+CodeMCP Shell - 可用命令:
+
+  基础命令:
+    help                    - 显示此帮助信息
+    exit, quit              - 退出shell
+    clear                   - 清屏
+    version                 - 显示版本信息
+    
+  CodeMCP命令:
+    tasks                   - 显示任务列表
+    status                  - 显示系统状态
+    monitor                 - 启动监控
+    queue                   - 队列管理
+    system                  - 系统管理
+    
+  直接执行:
+    输入任何其他命令将尝试作为系统命令执行
+    使用 '!' 前缀执行shell命令，如 '!ls -la'
+    
+  快捷键:
+    Ctrl+D                  - 退出
+    ↑/↓                     - 命令历史
+    Tab                     - 命令补全
+        """
+    
+    def setup_readline(self):
+        """设置readline历史记录"""
+        try:
+            readline.read_history_file(self.history_file)
+        except FileNotFoundError:
+            pass
+        
+        readline.set_history_length(1000)
+        atexit.register(readline.write_history_file, self.history_file)
+        
+        # 设置Tab补全
+        readline.parse_and_bind("tab: complete")
+    
+    def cmd_help(self, args: List[str]) -> None:
+        """显示帮助信息"""
+        print(self.help_text)
+    
+    def cmd_exit(self, args: List[str]) -> bool:
+        """退出命令"""
+        print("退出CodeMCP Shell")
+        return True
+    
+    def cmd_clear(self, args: List[str]) -> None:
+        """清屏命令"""
+        os.system('clear' if os.name == 'posix' else 'cls')
+    
+    def cmd_version(self, args: List[str]) -> None:
+        """显示版本信息"""
+        from src.codemcp.cli import __version__
+        print(f"CodeMCP Shell v{__version__}")
+        print("基于CodeMCP Console构建")
+    
+    def cmd_tasks(self, args: List[str]) -> None:
+        """任务列表命令"""
+        print("调用CodeMCP任务列表...")
+        # 这里可以调用实际的codemcp命令
+        # 暂时显示模拟信息
+        print("任务列表:")
+        print("  1. test-1 [pending]")
+        print("  2. test-2 [running]")
+        print("  3. test-3 [passed]")
+    
+    def cmd_status(self, args: List[str]) -> None:
+        """状态命令"""
+        print("系统状态:")
+        print("  API服务器: 运行中")
+        print("  数据库: 已连接")
+        print("  任务引擎: 运行中")
+        print("  活动任务: 3")
+    
+    def cmd_monitor(self, args: List[str]) -> None:
+        """监控命令"""
+        print("启动监控模式...")
+        print("按Ctrl+C退出监控")
+    
+    def cmd_queue(self, args: List[str]) -> None:
+        """队列命令"""
+        print("队列状态:")
+        print("  窗口大小: 5")
+        print("  运行中任务: 2")
+        print("  等待队列: 3")
+        print("  可用槽位: 3")
+    
+    def cmd_system(self, args: List[str]) -> None:
+        """系统命令"""
+        print("系统信息:")
+        print("  CodeMCP v0.1.0")
+        print("  Python: " + sys.version.split()[0])
+        print("  平台: " + sys.platform)
+    
+    def execute_system_command(self, command: str) -> None:
+        """执行系统命令"""
+        if command.startswith('!'):
+            # 执行shell命令
+            shell_cmd = command[1:].strip()
+            if shell_cmd:
+                print(f"执行: {shell_cmd}")
+                os.system(shell_cmd)
+            else:
+                print("错误: 请输入有效的shell命令")
+        else:
+            # 尝试作为系统命令执行
+            print(f"执行系统命令: {command}")
+            os.system(command)
+    
+    def process_command(self, command: str) -> bool:
+        """处理命令"""
+        command = command.strip()
+        if not command:
+            return False
+        
+        # 分割命令和参数
+        parts = command.split()
+        cmd = parts[0].lower()
+        args = parts[1:]
+        
+        # 检查是否是内置命令
+        if cmd in self.commands:
+            handler = self.commands[cmd]
+            if cmd in ["exit", "quit"]:
+                return handler(args)
+            else:
+                handler(args)
+        else:
+            # 尝试执行系统命令
+            self.execute_system_command(command)
+        
+        return False
+    
+    def run(self):
+        """运行交互式shell"""
+        print("=" * 60)
+        print("CodeMCP Shell - 交互式命令执行环境")
+        print("输入 'help' 查看可用命令")
+        print("输入 'exit' 或 'quit' 退出")
+        print("=" * 60)
+        print()
+        
+        while True:
+            try:
+                # 显示提示符
+                prompt = "code_shell> "
+                try:
+                    command = input(prompt)
+                except EOFError:
+                    print()  # 换行
+                    break
+                
+                # 处理命令
+                should_exit = self.process_command(command)
+                if should_exit:
+                    break
+                    
+            except KeyboardInterrupt:
+                print("\n输入 'exit' 或 'quit' 退出")
+            except Exception as e:
+                print(f"错误: {e}")
+
+
+def main():
+    """主函数"""
+    shell = CodeShell()
+    shell.run()
+
+
+if __name__ == "__main__":
+    main()

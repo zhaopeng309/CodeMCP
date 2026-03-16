@@ -1,0 +1,258 @@
+#!/usr/bin/env python3
+"""
+CodeMCP 开发工具
+
+开发相关的工具和命令，如测试、代码检查等。
+"""
+
+import sys
+import os
+import subprocess
+import argparse
+
+# 添加项目根目录到Python路径
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
+
+def print_header(title: str):
+    """打印标题"""
+    print("=" * 60)
+    print(f"CodeMCP 开发工具 - {title}")
+    print("=" * 60)
+
+
+def run_tests():
+    """运行测试"""
+    print_header("运行测试")
+    
+    try:
+        result = subprocess.run(
+            ["pytest", "tests/", "-v"],
+            cwd=project_root,
+            capture_output=True,
+            text=True
+        )
+        
+        print(result.stdout)
+        
+        if result.returncode == 0:
+            print("✓ 所有测试通过")
+            return True
+        else:
+            print("✗ 测试失败")
+            print(result.stderr)
+            return False
+            
+    except Exception as e:
+        print(f"✗ 运行测试失败: {e}")
+        return False
+
+
+def run_lint():
+    """运行代码检查"""
+    print_header("运行代码检查")
+    
+    try:
+        # 运行black检查
+        print("运行 black 检查...")
+        black_result = subprocess.run(
+            ["black", "--check", "src/", "tests/"],
+            cwd=project_root,
+            capture_output=True,
+            text=True
+        )
+        
+        if black_result.returncode == 0:
+            print("✓ black 检查通过")
+        else:
+            print("✗ black 检查失败")
+            print(black_result.stdout)
+        
+        # 运行isort检查
+        print("\n运行 isort 检查...")
+        isort_result = subprocess.run(
+            ["isort", "--check-only", "src/", "tests/"],
+            cwd=project_root,
+            capture_output=True,
+            text=True
+        )
+        
+        if isort_result.returncode == 0:
+            print("✓ isort 检查通过")
+        else:
+            print("✗ isort 检查失败")
+            print(isort_result.stdout)
+        
+        # 运行mypy检查
+        print("\n运行 mypy 检查...")
+        mypy_result = subprocess.run(
+            ["mypy", "src/"],
+            cwd=project_root,
+            capture_output=True,
+            text=True
+        )
+        
+        if mypy_result.returncode == 0:
+            print("✓ mypy 检查通过")
+        else:
+            print("✗ mypy 检查失败")
+            print(mypy_result.stdout)
+        
+        return all([
+            black_result.returncode == 0,
+            isort_result.returncode == 0,
+            mypy_result.returncode == 0
+        ])
+            
+    except Exception as e:
+        print(f"✗ 运行代码检查失败: {e}")
+        return False
+
+
+def format_code():
+    """格式化代码"""
+    print_header("格式化代码")
+    
+    try:
+        # 运行black格式化
+        print("运行 black 格式化...")
+        black_result = subprocess.run(
+            ["black", "src/", "tests/"],
+            cwd=project_root,
+            capture_output=True,
+            text=True
+        )
+        
+        if black_result.returncode == 0:
+            print("✓ black 格式化完成")
+        else:
+            print("✗ black 格式化失败")
+            print(black_result.stderr)
+        
+        # 运行isort格式化
+        print("\n运行 isort 格式化...")
+        isort_result = subprocess.run(
+            ["isort", "src/", "tests/"],
+            cwd=project_root,
+            capture_output=True,
+            text=True
+        )
+        
+        if isort_result.returncode == 0:
+            print("✓ isort 格式化完成")
+        else:
+            print("✗ isort 格式化失败")
+            print(isort_result.stderr)
+        
+        return black_result.returncode == 0 and isort_result.returncode == 0
+            
+    except Exception as e:
+        print(f"✗ 格式化代码失败: {e}")
+        return False
+
+
+def build_docs():
+    """构建文档"""
+    print_header("构建文档")
+    
+    try:
+        result = subprocess.run(
+            ["mkdocs", "build"],
+            cwd=project_root,
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode == 0:
+            print("✓ 文档构建成功")
+            print(f"文档已生成到: {project_root}/site")
+            return True
+        else:
+            print("✗ 文档构建失败")
+            print(result.stderr)
+            return False
+            
+    except Exception as e:
+        print(f"✗ 构建文档失败: {e}")
+        return False
+
+
+def show_project_info():
+    """显示项目信息"""
+    print_header("项目信息")
+    
+    try:
+        from src.codemcp import __version__
+        print(f"版本: {__version__}")
+    except ImportError:
+        print("版本: 未知")
+    
+    print(f"项目根目录: {project_root}")
+    print(f"Python版本: {sys.version.split()[0]}")
+    
+    # 显示目录结构
+    print("\n主要目录:")
+    for dir_name in ["src", "tests", "bin", "doc", "scripts"]:
+        dir_path = os.path.join(project_root, dir_name)
+        if os.path.exists(dir_path):
+            print(f"  {dir_name}/")
+    
+    return True
+
+
+def main():
+    """主函数"""
+    parser = argparse.ArgumentParser(description="CodeMCP 开发工具")
+    
+    subparsers = parser.add_subparsers(dest="command", help="可用命令")
+    
+    # test 命令
+    test_parser = subparsers.add_parser("test", help="运行测试")
+    
+    # lint 命令
+    lint_parser = subparsers.add_parser("lint", help="运行代码检查")
+    
+    # format 命令
+    format_parser = subparsers.add_parser("format", help="格式化代码")
+    
+    # docs 命令
+    docs_parser = subparsers.add_parser("docs", help="构建文档")
+    
+    # info 命令
+    info_parser = subparsers.add_parser("info", help="显示项目信息")
+    
+    # 如果没有提供命令，显示帮助
+    if len(sys.argv) == 1:
+        parser.print_help()
+        return
+    
+    args = parser.parse_args()
+    
+    if args.command == "test":
+        success = run_tests()
+        sys.exit(0 if success else 1)
+        
+    elif args.command == "lint":
+        success = run_lint()
+        sys.exit(0 if success else 1)
+        
+    elif args.command == "format":
+        success = format_code()
+        sys.exit(0 if success else 1)
+        
+    elif args.command == "docs":
+        success = build_docs()
+        sys.exit(0 if success else 1)
+        
+    elif args.command == "info":
+        success = show_project_info()
+        sys.exit(0 if success else 1)
+        
+    else:
+        parser.print_help()
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

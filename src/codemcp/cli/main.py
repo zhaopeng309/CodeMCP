@@ -19,7 +19,7 @@ app = typer.Typer(
     name="codemcp",
     help="CodeMCP Console - AI协同编排与执行服务器的交互式控制台",
     add_completion=False,
-    no_args_is_help=True,
+    no_args_is_help=False,  # 改为False，允许无参数时启动交互式控制台
 )
 
 # 创建控制台实例
@@ -35,6 +35,7 @@ def version_callback(value: bool):
 
 @app.callback()
 def main(
+    ctx: typer.Context,
     version: Optional[bool] = typer.Option(
         None,
         "--version",
@@ -48,8 +49,20 @@ def main(
     CodeMCP Console - AI协同编排与执行服务器的交互式控制台
 
     使用子命令管理任务、监控状态和配置系统。
+    如果没有提供子命令，将启动交互式控制台。
     """
-    pass
+    # 如果没有提供子命令，启动交互式控制台
+    if ctx.invoked_subcommand is None:
+        from .console import run_console
+        run_console()
+        raise typer.Exit()
+
+
+@app.command()
+def interactive():
+    """启动交互式控制台"""
+    from .console import run_console
+    run_console()
 
 
 @app.command()

@@ -99,15 +99,25 @@ class StatusPanel:
         
         # 添加指标
         metrics = self.metrics or {
-            '任务引擎': '运行中',
-            '窗口大小': 5,
-            '运行中任务': 0,
-            '等待队列': 0,
-            '可用槽位': 5,
+            'task_engine': '运行中',
+            'window_size': 5,
+            'running_tasks': 0,
+            'waiting_queue': 0,
+            'available_slots': 5,
+        }
+        
+        # 显示名称映射
+        display_names = {
+            'task_engine': '任务引擎',
+            'window_size': '窗口大小',
+            'running_tasks': '运行中任务',
+            'waiting_queue': '等待队列',
+            'available_slots': '可用槽位',
         }
         
         for key, value in metrics.items():
-            content.append((f"class:metric.{key}", f"{key}: {value}\n"))
+            display_name = display_names.get(key, key)
+            content.append((f"class:metric.{key}", f"{display_name}: {value}\n"))
         
         return content
 

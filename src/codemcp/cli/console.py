@@ -113,6 +113,20 @@ class InteractiveConsole:
             style="class:title",
         )
         
+        # Help信息区域
+        help_bar = Frame(
+            title="命令帮助",
+            body=Box(
+                Window(
+                    content=FormattedTextControl(self._get_help_text),
+                    style="class:help",
+                ),
+                padding=1,
+            ),
+            style="class:help.frame",
+            height=Dimension.exact(4),
+        )
+        
         # 状态栏
         status_bar = Window(
             content=FormattedTextControl(self._get_status_text),
@@ -162,7 +176,7 @@ class InteractiveConsole:
         # 命令输入区域
         command_input = TextArea(
             height=Dimension.exact(3),
-            prompt=">>> ",
+            prompt="code_shell> ",
             multiline=False,
             style="class:input",
         )
@@ -189,6 +203,7 @@ class InteractiveConsole:
         # 完整布局
         full_layout = HSplit([
             title_bar,
+            help_bar,
             main_content,
             status_bar,
         ])
@@ -246,6 +261,33 @@ class InteractiveConsole:
         return [
             ("class:status.mode", f" 模式: {status} "),
             ("class:status.help", " F1:帮助 | Ctrl+R:刷新 | Ctrl+L:清屏 | Ctrl+Q:退出 "),
+        ]
+
+    def _get_help_text(self) -> List[tuple]:
+        """获取帮助文本"""
+        return [
+            ("class:help.item", "可用命令: "),
+            ("class:help.command", "help "),
+            ("class:help.text", "- 显示帮助信息"),
+            ("class:help.command", " | tasks "),
+            ("class:help.text", "- 任务列表"),
+            ("class:help.command", " | status "),
+            ("class:help.text", "- 系统状态"),
+            ("class:help.command", " | execute "),
+            ("class:help.text", "- 执行任务"),
+            ("class:help.command", " | cancel "),
+            ("class:help.text", "- 取消任务"),
+            ("class:help.command", " | logs "),
+            ("class:help.text", "- 查看日志"),
+            ("class:help.command", " | clear "),
+            ("class:help.text", "- 清屏"),
+            ("class:help.command", " | refresh "),
+            ("class:help.text", "- 刷新"),
+            ("class:help.command", " | quit/exit "),
+            ("class:help.text", "- 退出\n"),
+            ("class:help.item", "提示: 在 "),
+            ("class:help.command", "code_shell> "),
+            ("class:help.text", "提示符后输入命令，按Enter执行"),
         ]
 
     def _get_tasks_text(self) -> List[tuple]:

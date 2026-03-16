@@ -7,11 +7,12 @@
 3. [安装与配置](#安装与配置)
 4. [快速入门](#快速入门)
 5. [Gateway API 使用](#gateway-api-使用)
-6. [Console CLI 使用](#console-cli-使用)
-7. [MCP 协议集成](#mcp-协议集成)
-8. [任务管理](#任务管理)
-9. [故障排除](#故障排除)
-10. [最佳实践](#最佳实践)
+6. [命令行工具包装器](#命令行工具包装器)
+7. [Console CLI 使用](#console-cli-使用)
+8. [MCP 协议集成](#mcp-协议集成)
+9. [任务管理](#任务管理)
+10. [故障排除](#故障排除)
+11. [最佳实践](#最佳实践)
 
 ## 简介
 
@@ -308,6 +309,130 @@ ws.onmessage = (event) => {
   const logEntry = JSON.parse(event.data);
   console.log(`[${logEntry.timestamp}] ${logEntry.level}: ${logEntry.message}`);
 };
+```
+
+## 命令行工具包装器
+
+CodeMCP 提供了多个命令行工具包装器，位于 `bin/` 目录下，方便用户直接使用而无需记忆复杂的 Python 命令。
+
+### bin 目录结构
+
+```
+bin/
+├── code_shell          # 交互式控制台包装器
+├── code_shell.py       # 交互式控制台 Python 脚本
+├── codemcp             # 通用 CLI 包装器
+├── codemcp-server      # API 服务器启动脚本
+├── codemcp-db          # 数据库管理工具
+└── codemcp-dev         # 开发工具
+```
+
+### 使用方法
+
+#### 1. 交互式控制台 (code_shell)
+
+启动交互式控制台，提示符为 `code_shell>`：
+
+```bash
+./bin/code_shell
+```
+
+或者使用 Python 脚本：
+
+```bash
+python bin/code_shell.py
+```
+
+交互式控制台功能：
+- 实时监控面板显示系统状态
+- 任务队列管理
+- 命令历史记录和 Tab 补全
+- 界面上方包含命令输入区域和 help 信息
+
+#### 2. API 服务器启动 (codemcp-server)
+
+启动 FastAPI 服务器：
+
+```bash
+./bin/codemcp-server
+```
+
+支持参数：
+- `--host`: 监听主机（默认：0.0.0.0）
+- `--port`: 监听端口（默认：8000）
+- `--reload`: 开发模式热重载
+
+示例：
+```bash
+./bin/codemcp-server --host 127.0.0.1 --port 8080 --reload
+```
+
+#### 3. 数据库管理 (codemcp-db)
+
+数据库管理工具：
+
+```bash
+./bin/codemcp-db init      # 初始化数据库
+./bin/codemcp-db check     # 检查数据库连接
+./bin/codemcp-db migrate   # 运行数据库迁移
+./bin/codemcp-db downgrade # 回滚迁移
+```
+
+#### 4. 通用 CLI (codemcp)
+
+通用命令行接口，无参数时自动启动交互式控制台：
+
+```bash
+./bin/codemcp              # 启动交互式控制台
+./bin/codemcp monitor      # 监控模式
+./bin/codemcp status       # 查看系统状态
+./bin/codemcp config       # 配置管理
+```
+
+#### 5. 开发工具 (codemcp-dev)
+
+开发相关工具：
+
+```bash
+./bin/codemcp-dev test     # 运行测试
+./bin/codemcp-dev lint     # 代码检查
+./bin/codemcp-dev format   # 代码格式化
+./bin/codemcp-dev docs     # 构建文档
+```
+
+### 环境要求
+
+确保已激活虚拟环境并安装依赖：
+
+```bash
+source venv/bin/activate  # Linux/Mac
+# 或
+venv\Scripts\activate     # Windows
+
+pip install -e .
+```
+
+### 权限设置
+
+首次使用时，需要给脚本添加执行权限：
+
+```bash
+chmod +x bin/*
+```
+
+### 快捷方式
+
+可以将 `bin/` 目录添加到 PATH 环境变量，以便在任何位置使用：
+
+```bash
+export PATH="$PATH:/path/to/codemcp/bin"
+```
+
+然后可以直接使用：
+```bash
+code_shell
+codemcp-server
+codemcp-db init
 ```
 
 ## Console CLI 使用
