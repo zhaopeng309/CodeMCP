@@ -435,77 +435,348 @@ codemcp report generate --format json --output stats.json
 
 ## MCP 协议集成
 
+### 连接方式
+
+CodeMCP 使用简化的 MCP 协议，通过 WebSocket 进行通信。连接时无需 API 密钥认证，仅需指定客户端类型。
+
+#### 正确的连接方法
+
+**WebSocket 连接端点：**
+```
+ws://localhost:8000/mcp/ws/{client_type}
+```
+
+其中 `client_type` 必须是以下之一：
+- `planner` - 规划器客户端（负责创建计划）
+- `executor` - 执行器客户端（负责执行任务）
+
+**重要说明：**
+- 连接 URL 必须包含正确的客户端类型（planner 或 executor）
+- 不需要额外的认证参数
+- 服务器必须在运行状态（默认端口 8000）
+
+#### 启动服务器
+
+在连接之前，确保 CodeMCP 服务器正在运行：
+
+```bash
+# 启动 Gateway 服务器（包含 MCP 端点）
+codemcp-server
+
+# 或使用 uvicorn 直接启动
+uvicorn codemcp.api.server:app --host 0.0.0.0 --port 8000 --reload
+```
+
+#### 验证连接
+
+连接前可以验证服务器状态：
+
+```bash
+# 检查 MCP 服务器信息
+curl http://localhost:8000/mcp/info
+
+# 检查健康状态
+curl http://localhost:8000/mcp/health
+```
+
 ### Planner 集成
 
 Planner 是通过 MCP 协议与 CodeMCP 通信的外部 AI，负责创建执行计划。
 
-#### MCP 端点
-
-- `mcp://codemcp/plan/create` - 创建新计划
-- `mcp://codemcp/plan/status` - 查询计划状态
-- `mcp://codemcp/system/list` - 获取系统列表
-
-#### 示例：Python 客户端
+#### 正确的连接示例
 
 ```python
-import httpx
-from mcp import Client
+import asyncio
+import json
+import websockets
+from datetime import datetime
 
-async def create_plan():
-    async with Client("http://localhost:8000/mcp") as client:
-        # 创建计划
-        response = await client.call(
-            "mcp://codemcp/plan/create",
-            {
-                "system_id": 1,
-                "requirements": "实现用户登录功能，包括邮箱验证和密码重置",
-                "constraints": "使用JWT认证，支持OAuth2.0"
+async def connect_planner():
+    """连接 Planner 客户端示例"""
+    
+    # 正确的连接 URL
+    ws_url = "ws://localhost:8000/mcp/ws/planner"
+    
+    try:
+        async with websockets.connect(ws_url) as websocket:
+            print("✅ 成功连接到 MCP Planner 服务器")
+            
+            # 发送 Ping 消息测试连接
+            ping_message = {
+                "message_id": "test-ping-001",
+                "message_type": "ping",
+                "source": "my-planner-client",
+                "destination": "server",
+                "timestamp": datetime.now().isoformat(),
+                "priority": "normal",
+                "metadata": {}
             }
-        )
+            
+            await websocket.send(json.dumps(ping_message))
+            print("📤 发送 Ping 消息")
+            
+            # 接收响应
+            response = await websocket.recv()
+            response_data = json.loads(response)
+            print(f"📥 收到响应: {response_data}")
+            
+            return True
+            
+    except Exception as e:
+        print(f"❌ 连接失败: {e}")
+        return False
+
+# 运行连接测试
+asyncio.run(connect_planner())
+```
+
+#### 创建计划示例
+
+```python
+async def create_plan_example():
+    """创建计划示例"""
+    
+    ws_url = "ws://localhost:8000/mcp/ws/planner"
+    
+    async with websockets.connect(ws_url) as websocket:
+        # 创建计划消息
+        plan_message = {
+            "message_id": "plan-create-001",
+            "message_type": "plan/create",
+            "source": "planner-agent",
+            "destination": "server",
+            "timestamp": datetime.now().isoformat(),
+            "priority": "normal",
+            "metadata": {},
+            "system_id": "1",
+            "description": "用户认证模块开发",
+            "plan_data": {
+                "blocks": [
+                    {
+                        "name": "用户认证模块",
+                        "features": [
+                            {
+                                "name": "用户注册",
+                                "tests": [
+                                    {
+                                        "name": "注册API测试",
+                                        "command": "pytest tests/test_auth.py::test_register"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
         
-        plan_id = response["plan_id"]
-        print(f"计划创建成功: {plan_id}")
+        await websocket.send(json.dumps(plan_message))
+        response = await websocket.recv()
+        
+        print(f"计划创建响应: {response}")
+        return json.loads(response)
 ```
 
 ### Executor 集成
 
-Executor 是执行具体测试任务的外部 agent。
+Executor 是执行具体测试任务的外部 agent，通过 MCP WebSocket 连接与服务器通信。
 
-#### 任务获取
+#### 正确的连接方法
+
+**WebSocket 连接端点：**
+```
+ws://localhost:8000/mcp/ws/executor
+```
+
+#### 完整的 Executor 示例
 
 ```python
-async def fetch_task():
-    async with httpx.AsyncClient() as client:
-        # 获取下一个任务
-        response = await client.get(
-            "http://localhost:8000/api/v1/tasks/next",
-            headers={"X-API-Key": "your-api-key"}
-        )
+import asyncio
+import json
+import websockets
+from datetime import datetime
+
+class CodeMCPExecutor:
+    """CodeMCP Executor 客户端"""
+    
+    def __init__(self, executor_id="executor-001"):
+        self.executor_id = executor_id
+        self.ws_url = "ws://localhost:8000/mcp/ws/executor"
+        self.websocket = None
         
-        if response.status_code == 200:
-            task = response.json()
-            return task
-        else:
+    async def connect(self):
+        """连接到 MCP 服务器"""
+        try:
+            self.websocket = await websockets.connect(self.ws_url)
+            print(f"✅ Executor {self.executor_id} 已连接到 MCP 服务器")
+            return True
+        except Exception as e:
+            print(f"❌ 连接失败: {e}")
+            return False
+    
+    async def fetch_task(self):
+        """获取待执行的任务"""
+        if not self.websocket:
+            await self.connect()
+            
+        # 发送任务获取请求
+        fetch_message = {
+            "message_id": f"fetch-{datetime.now().timestamp()}",
+            "message_type": "task/fetch",
+            "source": self.executor_id,
+            "destination": "server",
+            "timestamp": datetime.now().isoformat(),
+            "priority": "normal",
+            "metadata": {},
+            "executor_id": self.executor_id,
+            "capabilities": ["python", "pytest", "shell"],
+            "max_tasks": 1
+        }
+        
+        await self.websocket.send(json.dumps(fetch_message))
+        
+        # 等待响应
+        response = await self.websocket.recv()
+        response_data = json.loads(response)
+        
+        if response_data.get("message_type") == "error":
+            print(f"⚠ 获取任务失败: {response_data.get('metadata', {}).get('error_message')}")
             return None
+            
+        # 解析任务数据
+        task_data = response_data.get("metadata", {})
+        if task_data.get("status") == "no_tasks":
+            print("📭 暂无可用任务")
+            return None
+            
+        print(f"📥 获取到任务: {task_data}")
+        return task_data
+    
+    async def submit_result(self, task_id, success, output="", error_message="", duration=0.0):
+        """提交任务执行结果"""
+        result_message = {
+            "message_id": f"result-{datetime.now().timestamp()}",
+            "message_type": "task/result",
+            "source": self.executor_id,
+            "destination": "server",
+            "timestamp": datetime.now().isoformat(),
+            "priority": "normal",
+            "metadata": {},
+            "task_id": task_id,
+            "exit_code": 0 if success else 1,
+            "stdout": output,
+            "stderr": error_message,
+            "duration": duration,
+            "success": success,
+            "error_message": error_message if not success else None
+        }
+        
+        await self.websocket.send(json.dumps(result_message))
+        
+        # 等待确认
+        response = await self.websocket.recv()
+        response_data = json.loads(response)
+        
+        if response_data.get("message_type") == "error":
+            print(f"⚠ 提交结果失败: {response_data.get('metadata', {}).get('error_message')}")
+            return False
+            
+        print(f"✅ 任务结果提交成功: {task_id}")
+        return True
+    
+    async def close(self):
+        """关闭连接"""
+        if self.websocket:
+            await self.websocket.close()
+            print("🔌 连接已关闭")
+
+# 使用示例
+async def executor_example():
+    executor = CodeMCPExecutor("my-executor-001")
+    
+    # 连接服务器
+    if not await executor.connect():
+        return
+    
+    try:
+        # 获取任务
+        task = await executor.fetch_task()
+        
+        if task:
+            task_id = task.get("task_id")
+            command = task.get("command", "")
+            
+            print(f"执行任务 {task_id}: {command}")
+            
+            # 模拟任务执行
+            import subprocess
+            try:
+                result = subprocess.run(
+                    command,
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                
+                # 提交结果
+                success = result.returncode == 0
+                await executor.submit_result(
+                    task_id=task_id,
+                    success=success,
+                    output=result.stdout,
+                    error_message=result.stderr,
+                    duration=5.5
+                )
+                
+            except subprocess.TimeoutExpired:
+                await executor.submit_result(
+                    task_id=task_id,
+                    success=False,
+                    error_message="任务执行超时",
+                    duration=30.0
+                )
+                
+    finally:
+        await executor.close()
+
+# 运行示例
+asyncio.run(executor_example())
 ```
 
-#### 提交结果
+#### 备选方案：使用 HTTP API（如果启用）
+
+如果 MCP 服务器的 HTTP 端点已启用，也可以使用以下方式：
 
 ```python
-async def submit_result(task_id, passed, output):
+import httpx
+
+async def fetch_task_http():
+    """通过 HTTP 获取任务（如果端点启用）"""
     async with httpx.AsyncClient() as client:
-        response = await client.put(
-            f"http://localhost:8000/api/v1/tasks/{task_id}/result",
-            json={
-                "passed": passed,
-                "output": output,
-                "execution_time": 15.5  # 执行时间（秒）
-            },
-            headers={"X-API-Key": "your-api-key"}
-        )
-        
-        return response.status_code == 200
+        try:
+            response = await client.get("http://localhost:8000/mcp/executor/tasks")
+            if response.status_code == 200:
+                return response.json()
+        except Exception as e:
+            print(f"HTTP 请求失败: {e}")
+            return None
+
+async def submit_result_http(task_id, result_data):
+    """通过 HTTP 提交结果（如果端点启用）"""
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                f"http://localhost:8000/mcp/executor/tasks/{task_id}/result",
+                json=result_data
+            )
+            return response.status_code == 200
+        except Exception as e:
+            print(f"HTTP 提交失败: {e}")
+            return False
 ```
+
+**注意：** 默认情况下，MCP 服务器的 HTTP 端点可能未完全实现，建议优先使用 WebSocket 连接。
 
 ## 任务管理
 
