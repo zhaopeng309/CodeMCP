@@ -87,6 +87,38 @@ System (系统) → Block (模块) → Feature (功能) → Test (测试)
 
 ### 运行服务
 
+#### 使用启动脚本（推荐）
+项目根目录提供了完整的启动脚本 `start.sh`，支持一键启动和多种操作模式：
+
+```bash
+# 给予执行权限（首次使用）
+chmod +x start.sh
+
+# 查看帮助信息
+./start.sh --help
+
+# 启动完整开发环境（推荐）
+./start.sh --dev
+
+# 只初始化环境（安装依赖、初始化数据库）
+./start.sh --init
+
+# 只启动服务器
+./start.sh --server --dev
+
+# 只启动CLI控制台
+./start.sh --cli
+
+# 运行测试
+./start.sh --test
+
+# 构建文档
+./start.sh --docs
+
+# 清理环境
+./start.sh --clean
+```
+
 #### 启动 Gateway 服务器
 ```bash
 # 方式一：使用内置命令
