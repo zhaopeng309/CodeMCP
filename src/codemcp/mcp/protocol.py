@@ -112,6 +112,43 @@ class PlanCreateMessage(BaseMessage):
         })
         return base_dict
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "PlanCreateMessage":
+        """从字典创建消息
+
+        支持两种格式：
+        1. 直接包含system_id、description、plan_data字段
+        2. 包含在data字段中的嵌套格式（兼容旧版）
+        """
+        # 检查是否有嵌套的data字段
+        if "data" in data and isinstance(data["data"], dict):
+            nested_data = data["data"]
+            # 从嵌套数据中提取字段
+            system_id = nested_data.get("system_name") or nested_data.get("system_id")
+            description = nested_data.get("description", "")
+            plan_data = nested_data.get("plan_data") or nested_data
+        else:
+            # 直接使用顶层字段
+            system_id = data.get("system_id")
+            description = data.get("description", "")
+            plan_data = data.get("plan_data", {})
+
+        # 调用基类from_dict，然后创建PlanCreateMessage实例
+        base_message = super().from_dict(data)
+
+        return cls(
+            message_id=base_message.message_id,
+            message_type=base_message.message_type,
+            priority=base_message.priority,
+            timestamp=base_message.timestamp,
+            source=base_message.source,
+            destination=base_message.destination,
+            metadata=base_message.metadata,
+            system_id=system_id,
+            description=description,
+            plan_data=plan_data,
+        )
+
 
 @dataclass
 class TaskFetchMessage(BaseMessage):

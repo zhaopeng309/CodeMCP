@@ -16,7 +16,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.task_engine import TaskEngine
 from ..core.executor import LocalCommandExecutor
+from ..core.planner import get_planner
 from ..database.session import get_db_session
+from ..models.system import SystemModel
+from ..models.block import BlockModel
+from ..models.feature import FeatureModel
 from ..models.test import TestModel, TestStatus
 from .protocol import (
     BaseMessage,
@@ -186,23 +190,98 @@ class MCPServer:
             响应消息
         """
         try:
-            # 这里应该实现创建计划的逻辑
-            # 目前先返回成功响应
             logger.info(f"收到创建计划请求: {message.system_id} - {message.description}")
+
+            # 获取核心Planner实例
+            planner = get_planner()
+
+            # 创建或获取SystemModel
+            # 注意：这里假设system_id是系统名称
+            system_name = message.system_id
+            system_description = message.description
+
+            # 检查是否已存在同名系统
+            stmt = select(SystemModel).where(SystemModel.name == system_name)
+            result = await session.execute(stmt)
+            existing_system = result.scalar_one_or_none()
+
+            if existing_system:
+                system = existing_system
+                logger.info(f"使用现有系统: {system_name}")
+            else:
+                # 创建新系统
+                system = SystemModel(
+                    name=system_name,
+                    description=system_description,
+                    status="active"
+                )
+                session.add(system)
+                await session.commit()
+                await session.refresh(system)
+                logger.info(f"创建新系统: {system_name} (ID: {system.id})")
+
+            # 使用核心Planner创建计划
+            logger.info(f"使用核心Planner为系统 {system_name} 创建计划...")
+            blocks = await planner.create_plan(system, system_description)
+
+            # 保存生成的模块到数据库
+            saved_blocks = []
+            for block in blocks:
+                # 设置系统关联
+                block.system_id = system.id
+                session.add(block)
+                saved_blocks.append(block)
+
+            await session.commit()
+
+            # 刷新获取ID
+            for block in saved_blocks:
+                await session.refresh(block)
+
+            # 拆解每个模块为功能点
+            for block in saved_blocks:
+                features = await planner.breakdown_block(block)
+                for feature in features:
+                    feature.block_id = block.id
+                    session.add(feature)
+
+            await session.commit()
+
+            # 刷新功能点获取ID
+            for block in saved_blocks:
+                for feature in block.features:
+                    await session.refresh(feature)
+
+            # 拆解每个功能点为测试
+            for block in saved_blocks:
+                for feature in block.features:
+                    tests = await planner.breakdown_feature(feature)
+                    for test in tests:
+                        test.feature_id = feature.id
+                        session.add(test)
+
+            await session.commit()
+
+            logger.info(f"计划创建成功: 系统={system_name}, 模块数={len(saved_blocks)}")
 
             return BaseMessage(
                 message_type=MessageType.PLAN_STATUS,
                 source="server",
                 destination=message.source,
                 metadata={
-                    "plan_id": "generated_plan_id",
+                    "plan_id": str(system.id),
                     "status": "created",
-                    "system_id": message.system_id,
+                    "system_id": system_name,
+                    "system_db_id": str(system.id),
+                    "blocks_count": len(saved_blocks),
+                    "message": "计划创建成功"
                 },
             )
 
         except Exception as e:
             logger.error(f"处理创建计划失败: {e}")
+            # 回滚事务
+            await session.rollback()
             return ErrorMessage(
                 error_message=f"创建计划失败: {str(e)}",
                 source="server",

@@ -11,9 +11,34 @@ import uuid
 import time
 import subprocess
 import os
+import sys
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Callable
 import websockets
+
+# 尝试导入核心Planner接口
+try:
+    # 添加src目录到路径以便导入
+    src_path = os.path.join(os.path.dirname(__file__), "../../src")
+    if os.path.exists(src_path):
+        sys.path.insert(0, src_path)
+
+    from codemcp.core.planner import TaskPlanner, get_planner
+    from codemcp.models.system import SystemModel
+    from codemcp.models.block import BlockModel
+    from codemcp.models.feature import FeatureModel
+    from codemcp.models.test import TestModel
+
+    HAS_CORE_PLANNER = True
+except ImportError:
+    HAS_CORE_PLANNER = False
+    TaskPlanner = None
+    get_planner = None
+    SystemModel = None
+    BlockModel = None
+    FeatureModel = None
+    TestModel = None
+    print("⚠️ 无法导入核心Planner接口，将使用本地需求分析器")
 
 # 导入需求分析器
 try:
@@ -25,7 +50,7 @@ except ImportError:
     class RequirementsAnalyzerClass:
         def analyze_requirements(self, text: str) -> Dict[str, Any]:
             return {"system_name": "默认系统", "description": text[:100], "blocks": []}
-        
+
         def refine_plan_based_on_failure(self, plan: Dict[str, Any],
                                         failed_features: List[str]) -> Dict[str, Any]:
             return plan
@@ -34,24 +59,41 @@ except ImportError:
 class CodeMCPPlannerClient:
     """CodeMCP Planner 客户端 - 合并增强版"""
     
-    def __init__(self, 
-                 host: str = "localhost", 
+    def __init__(self,
+                 host: str = "localhost",
                  port: int = 8000,
-                 planner_id: str = "openclaw-planner"):
+                 planner_id: str = "openclaw-planner",
+                 use_core_planner: bool = True):
         """
         初始化 Planner 客户端
-        
+
         Args:
             host: CodeMCP 服务器主机
             port: CodeMCP 服务器端口
             planner_id: Planner 客户端标识
+            use_core_planner: 是否使用核心Planner接口（如果可用）
         """
         self.host = host
         self.port = port
         self.planner_id = planner_id
         self.ws_url = f"ws://{host}:{port}/mcp/ws/planner"
-        self.requirements_analyzer = RequirementsAnalyzerClass()
         self.user_feedback_callback = None
+
+        # 初始化核心Planner（如果可用且启用）
+        self.use_core_planner = use_core_planner and HAS_CORE_PLANNER
+        if self.use_core_planner:
+            try:
+                self.core_planner = get_planner()
+                print("✅ 使用核心Planner接口")
+            except Exception as e:
+                print(f"⚠️ 初始化核心Planner失败: {e}")
+                self.use_core_planner = False
+
+        # 初始化需求分析器（作为备用）
+        self.requirements_analyzer = RequirementsAnalyzerClass()
+
+        if not self.use_core_planner:
+            print("ℹ️ 使用本地需求分析器")
         
     def set_user_feedback_callback(self, callback: Callable[[str, Dict[str, Any]], None]):
         """
@@ -69,7 +111,94 @@ class CodeMCPPlannerClient:
                 self.user_feedback_callback(message_type, data)
             except Exception as e:
                 print(f"⚠️ 用户反馈回调错误: {e}")
-    
+
+    def _dict_to_block_model(self, block_dict: Dict[str, Any]) -> BlockModel:
+        """将字典转换为BlockModel（模拟）"""
+        if not HAS_CORE_PLANNER:
+            raise ImportError("核心Planner接口不可用")
+
+        # 创建模拟的BlockModel（不保存到数据库）
+        block = BlockModel()
+        block.name = block_dict.get("name", "")
+        block.description = block_dict.get("description", "")
+        block.priority = block_dict.get("priority", 0)
+        block.features = []  # 将在后续步骤中填充
+        return block
+
+    def _block_model_to_dict(self, block: BlockModel) -> Dict[str, Any]:
+        """将BlockModel转换为字典"""
+        features = []
+        for feature in block.features:
+            feature_dict = {
+                "name": feature.name,
+                "description": feature.description,
+                "test_command": feature.test_command if hasattr(feature, 'test_command') else "",
+                "priority": feature.priority
+            }
+            features.append(feature_dict)
+
+        return {
+            "name": block.name,
+            "description": block.description,
+            "priority": block.priority,
+            "features": features
+        }
+
+    def _create_mock_system_model(self, system_name: str, description: str) -> SystemModel:
+        """创建模拟的SystemModel（不保存到数据库）"""
+        if not HAS_CORE_PLANNER:
+            raise ImportError("核心Planner接口不可用")
+
+        system = SystemModel()
+        system.name = system_name
+        system.description = description
+        system.blocks = []
+        return system
+
+    async def _analyze_with_core_planner(self, requirements_text: str) -> Dict[str, Any]:
+        """使用核心Planner分析需求"""
+        try:
+            print("🧠 使用核心Planner分析需求...")
+
+            # 首先使用需求分析器获取基本信息
+            basic_plan = self.requirements_analyzer.analyze_requirements(requirements_text)
+            system_name = basic_plan["system_name"]
+            description = basic_plan["description"]
+
+            # 创建模拟系统
+            system = self._create_mock_system_model(system_name, description)
+
+            # 使用核心Planner创建计划
+            blocks = await self.core_planner.create_plan(system, description)
+
+            # 将BlockModel转换为字典格式
+            blocks_dict = []
+            for block in blocks:
+                # 拆解模块为功能点
+                features = await self.core_planner.breakdown_block(block)
+                block.features = features
+
+                # 对于每个功能点，拆解为测试
+                for feature in features:
+                    tests = await self.core_planner.breakdown_feature(feature)
+                    feature.tests = tests
+
+                # 转换为字典
+                block_dict = self._block_model_to_dict(block)
+                blocks_dict.append(block_dict)
+
+            return {
+                "system_name": system_name,
+                "description": description,
+                "blocks": blocks_dict,
+                "source": "core_planner"
+            }
+
+        except Exception as e:
+            print(f"⚠️ 核心Planner分析失败: {e}")
+            # 回退到本地需求分析器
+            return self.requirements_analyzer.analyze_requirements(requirements_text)
+
     async def connect(self):
         """
         连接到 CodeMCP Planner 端点
@@ -137,27 +266,38 @@ class CodeMCPPlannerClient:
                                      websocket) -> Dict[str, Any]:
         """
         分析用户需求并创建计划
-        
+
         Args:
             requirements_text: 自然语言需求描述
             websocket: WebSocket 连接
-            
+
         Returns:
             计划创建响应
         """
         print("🔍 分析用户需求...")
         self._notify_user("requirements_analysis_started", {"requirements": requirements_text[:200]})
-        
-        # 分析需求
-        analyzed_plan = self.requirements_analyzer.analyze_requirements(requirements_text)
-        
-        print(f"📋 生成计划: {analyzed_plan['system_name']}")
+
+        # 分析需求（使用核心Planner或本地分析器）
+        if self.use_core_planner:
+            try:
+                analyzed_plan = await self._analyze_with_core_planner(requirements_text)
+                plan_source = "core_planner"
+            except Exception as e:
+                print(f"⚠️ 核心Planner分析失败，使用本地分析器: {e}")
+                analyzed_plan = self.requirements_analyzer.analyze_requirements(requirements_text)
+                plan_source = "local_analyzer_fallback"
+        else:
+            analyzed_plan = self.requirements_analyzer.analyze_requirements(requirements_text)
+            plan_source = "local_analyzer"
+
+        print(f"📋 生成计划 ({plan_source}): {analyzed_plan['system_name']}")
         self._notify_user("plan_generated", {
             "system_name": analyzed_plan["system_name"],
             "blocks_count": len(analyzed_plan["blocks"]),
-            "total_features": sum(len(block["features"]) for block in analyzed_plan["blocks"])
+            "total_features": sum(len(block["features"]) for block in analyzed_plan["blocks"]),
+            "source": plan_source
         })
-        
+
         # 创建计划
         plan_response = await self.create_plan(
             websocket=websocket,
@@ -165,7 +305,7 @@ class CodeMCPPlannerClient:
             description=analyzed_plan["description"],
             blocks=analyzed_plan["blocks"]
         )
-        
+
         return plan_response
     
     async def create_plan(self,
@@ -529,12 +669,12 @@ class CodeMCPPlannerClient:
                          failed_features: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         重新规划失败的任务
-        
+
         Args:
             websocket: WebSocket 连接
             original_plan: 原始计划
             failed_features: 失败的功能点列表
-            
+
         Returns:
             重新规划后的计划
         """
@@ -543,21 +683,41 @@ class CodeMCPPlannerClient:
             "failed_count": len(failed_features),
             "original_system": original_plan.get("system_name")
         })
-        
-        # 使用需求分析器重新规划
+
+        refined_plan = None
+        plan_source = "local_analyzer"
+
         # 提取失败功能的名称列表
         failed_feature_names = [feature.get("name", "") for feature in failed_features]
-        refined_plan = self.requirements_analyzer.refine_plan_based_on_failure(
-            original_plan, failed_feature_names
-        )
-        
-        print(f"📋 重新规划完成: {refined_plan['system_name']}")
+
+        # 尝试使用核心Planner重新规划（如果可用）
+        if self.use_core_planner and hasattr(self.requirements_analyzer, 'refine_plan_based_on_failure'):
+            try:
+                # 使用需求分析器的重新规划功能
+                refined_plan = self.requirements_analyzer.refine_plan_based_on_failure(
+                    original_plan, failed_feature_names
+                )
+                plan_source = "core_planner_enhanced"
+                print(f"📋 使用核心Planner重新规划完成: {refined_plan['system_name']}")
+            except Exception as e:
+                print(f"⚠️ 核心Planner重新规划失败: {e}")
+                refined_plan = None
+
+        # 如果核心Planner不可用或失败，使用本地分析器
+        if refined_plan is None:
+            refined_plan = self.requirements_analyzer.refine_plan_based_on_failure(
+                original_plan, failed_feature_names
+            )
+            plan_source = "local_analyzer"
+            print(f"📋 使用本地分析器重新规划完成: {refined_plan['system_name']}")
+
         self._notify_user("replanning_completed", {
             "system_name": refined_plan["system_name"],
             "blocks_count": len(refined_plan["blocks"]),
-            "total_features": sum(len(block["features"]) for block in refined_plan["blocks"])
+            "total_features": sum(len(block["features"]) for block in refined_plan["blocks"]),
+            "source": plan_source
         })
-        
+
         # 创建新的计划
         new_plan_response = await self.create_plan(
             websocket=websocket,
@@ -565,11 +725,12 @@ class CodeMCPPlannerClient:
             description=refined_plan["description"],
             blocks=refined_plan["blocks"]
         )
-        
+
         return {
             "replanned": True,
             "original_plan": original_plan,
             "refined_plan": refined_plan,
             "new_plan_response": new_plan_response,
-            "failed_features": failed_features
+            "failed_features": failed_features,
+            "plan_source": plan_source
         }
