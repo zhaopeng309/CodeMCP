@@ -31,7 +31,7 @@ class TaskQueueModel(BaseModel):
 
     test_id: Mapped[str] = mapped_column(
         String(36),
-        ForeignKey("test_model.id", ondelete="CASCADE"),
+        ForeignKey("test.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         doc="关联的测试 ID",

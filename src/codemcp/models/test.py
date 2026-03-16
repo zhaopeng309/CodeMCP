@@ -30,7 +30,7 @@ class TestModel(BaseModel):
 
     feature_id: Mapped[str] = mapped_column(
         String(36),
-        ForeignKey("feature_model.id", ondelete="CASCADE"),
+        ForeignKey("feature.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         doc="所属功能点 ID",

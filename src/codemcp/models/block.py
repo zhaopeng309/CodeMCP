@@ -30,7 +30,7 @@ class BlockModel(BaseModel):
 
     system_id: Mapped[str] = mapped_column(
         String(36),
-        ForeignKey("system_model.id", ondelete="CASCADE"),
+        ForeignKey("system.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         doc="所属系统 ID",
