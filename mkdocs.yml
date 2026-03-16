@@ -1,0 +1,118 @@
+site_name: CodeMCP
+site_description: AI协同编排与执行服务器 - 文档
+site_author: CodeMCP Team
+site_url: https://codemcp.example.com
+
+repo_name: zhaopeng309/CodeMCP
+repo_url: https://github.com/zhaopeng309/CodeMCP
+edit_uri: edit/main/doc/
+
+# 主题配置
+theme:
+  name: material
+  palette:
+    # 浅色模式
+    - scheme: default
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: 切换到深色模式
+    # 深色模式
+    - scheme: slate
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: 切换到浅色模式
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+
+# 插件配置
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_category_heading: true
+            heading_level: 3
+
+# 扩展
+markdown_extensions:
+  - admonition
+  - codehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: "!!python/name:material.extensions.emoji.twemoji"
+      emoji_generator: "!!python/name:material.extensions.emoji.to_svg"
+  - toc:
+      permalink: true
+      toc_depth: 3
+
+# 导航结构
+nav:
+  - 首页: index.md
+  - 项目概述:
+    - 项目简介: doc/project_summary.md
+    - 架构设计: doc/architecture_design.md
+    - 项目结构: doc/project_structure.md
+  - 核心概念:
+    - 状态机设计: doc/state_machine_design.md
+    - 任务窗口机制: doc/task_window_mechanism.md
+    - 数据模型设计: doc/data_model_design.md
+    - 数据库模型: doc/database_models.md
+  - 开发指南:
+    - MCP协议接口: doc/mcp_protocol_interface.md
+    - 控制台CLI设计: doc/console_cli_design.md
+    - CLI实现: doc/console_cli_implementation.md
+    - API规范: doc/api_specification.md
+  - 部署与运维:
+    - 文档与部署: doc/documentation_and_deployment.md
+    - 测试策略: doc/testing_strategy.md
+  - API参考:
+    - 快速开始: api/quickstart.md
+    - 任务API: api/tasks.md
+    - 队列API: api/queue.md
+    - 状态API: api/status.md
+  - 开发者指南:
+    - 贡献指南: dev/contributing.md
+    - 代码规范: dev/code_style.md
+    - 测试指南: dev/testing.md
+  - 附录:
+    - 配置参考: appendix/configuration.md
+    - 故障排除: appendix/troubleshooting.md
+    - 常见问题: appendix/faq.md
+
+# 自定义目录
+docs_dir: doc
+
+# 额外文件
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/extra.js
+
+# 版权信息
+copyright: Copyright &copy; 2024 CodeMCP Team
+
+# Google Analytics (可选)
+# google_analytics:
+#   - UA-XXXXXXXX-X
+#   - auto
