@@ -1,0 +1,90 @@
+{
+  "server": {
+    "url": "http://localhost:8000",
+    "api_key": "your-secret-api-key-here",
+    "timeout": 30,
+    "retry_attempts": 3,
+    "health_check_interval": 60
+  },
+  "executor": {
+    "id": "executor-001",
+    "name": "AI Code Executor",
+    "role": "feature_implementation",
+    "description": "负责功能实现和测试的专业AI执行器",
+    "capabilities": [
+      "python_development",
+      "fastapi",
+      "pytest",
+      "frontend_basic",
+      "api_design",
+      "testing"
+    ],
+    "version": "1.0.0",
+    "tags": ["python", "fastapi", "testing"]
+  },
+  "polling": {
+    "enabled": true,
+    "interval": 5,
+    "max_empty_polls": 10,
+    "jitter": 2,
+    "backoff_factor": 1.5
+  },
+  "execution": {
+    "max_retries": 3,
+    "retry_delay": 10,
+    "timeout": 300,
+    "workspace_dir": "/tmp/codemcp-workspace",
+    "cleanup_on_success": true,
+    "keep_logs": true,
+    "max_workspace_age_days": 7
+  },
+  "testing": {
+    "framework": "pytest",
+    "coverage_threshold": 80,
+    "fail_fast": false,
+    "verbose": true,
+    "additional_args": "--tb=short -v"
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "/var/log/codemcp-executor.log",
+    "max_size_mb": 10,
+    "backup_count": 5,
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  },
+  "monitoring": {
+    "enabled": true,
+    "metrics_port": 9090,
+    "health_endpoint": "/health",
+    "metrics_endpoint": "/metrics"
+  },
+  "notifications": {
+    "enabled": false,
+    "on_success": true,
+    "on_failure": true,
+    "on_retry": true,
+    "channels": ["log"],
+    "webhook_url": ""
+  },
+  "security": {
+    "validate_ssl": true,
+    "api_key_header": "Authorization",
+    "rate_limit": 100
+  },
+  "integration": {
+    "coding_agent": {
+      "enabled": false,
+      "command": "coding-agent",
+      "args": "--verbose"
+    },
+    "git": {
+      "auto_commit": false,
+      "user_name": "AI Executor",
+      "user_email": "executor@codemcp.ai"
+    },
+    "docker": {
+      "enabled": false,
+      "image": "python:3.9-slim"
+    }
+  }
+}

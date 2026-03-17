@@ -5,187 +5,121 @@ All notable changes to the CodeMCP Planner Skill will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2026-03-17
+## [2.0.0] - 2026-03-17
 
-### Added
-- Initial release of CodeMCP Planner Skill
-- Complete AI协同设计工作流管理
-- Four-layer data model: System → Block → Feature → Test
-- Main CLI tool: `codemcp-planner`
-- Comprehensive script collection for workflow management
-- Automated git commit functionality
-- Real-time task monitoring
-- Progress report generation
-- Problem reporting system
-- Environment checking tools
-- Service management scripts
-- Example projects and templates
-- Complete documentation
-- Integration guides for OpenClaw and coding-agent
-- Configuration management
-- Notification system support
+### 🎉 增强版发布
 
-### Features
-- **需求分析**: Natural language to structured plan conversion
-- **计划创建**: Template-based plan creation with validation
-- **任务流发送**: Optimized task sequence delivery to CodeMCP
-- **自动git提交**: Intelligent git commit automation
-- **失败处理**: Smart failure detection and re-planning
-- **用户反馈**: Real-time status updates and reporting
-- **多agent协调**: Coordination of multiple AI agents
-- **端到端管理**: Complete lifecycle management
+#### 新增功能
+- **项目记忆文件系统**: 每个项目自动创建 `memory.md` 记录完整历史
+- **统一配置管理**: `.codemcp-config.json` 保管所有认证信息和设置
+- **用户沟通批准机制**: 充分沟通后用户批准才执行计划
+- **CodeMCP连接健康监控**: 实时检测服务器状态和连接可用性
+- **流式管理与状态汇报**: CLI命令监控和实时状态汇报
 
-### Technical Details
-- Built with Shell scripting for maximum compatibility
-- Simple CLI interface with intuitive commands
-- Modular architecture for easy extension
-- Comprehensive error handling and logging
-- Environment-aware configuration
-- Git integration with smart commit messages
-- CodeMCP API integration
-- OpenClaw skill standard compliance
+#### 新增工具脚本
+- `scripts/codemcp_planner_enhanced_fixed.sh` - 增强版工作流管理器
+- `start_enhanced.sh` - 增强版启动脚本（包含依赖检查）
+- `test_enhanced_features.sh` - 增强版功能测试脚本
+- `ENHANCED_FEATURES_SUMMARY.md` - 增强版功能总结文档
 
-### Documentation
-- Complete SKILL.md specification
-- Detailed README with examples
-- API reference documentation
-- Troubleshooting guide
-- Best practices documentation
-- Workflow diagrams
-- Configuration examples
-- Integration guides
+#### 文档更新
+- 更新 `SKILL.md` 包含完整增强版功能说明
+- 更新 `README.md` 添加增强版使用指南
+- 新增工作流程图和API参考文档
+- 完善故障排除和最佳实践指南
 
-### Examples
-- Basic workflow example
-- Advanced multi-agent coordination
-- Project plan templates
-- Progress report samples
-- Configuration templates
-- CI/CD integration examples
+#### 技术改进
+- 改进错误处理和用户反馈
+- 优化配置管理和类型安全
+- 增强连接检测和自动修复
+- 改进脚本性能和可靠性
 
-### Dependencies
-- CodeMCP platform
-- Git
-- Python 3.8+
-- OpenClaw framework (recommended)
-- coding-agent skill (recommended)
+#### 向后兼容性
+- 完全兼容 v1.0.0 的标准版功能
+- 增强版功能可选择性使用
+- 配置文件自动迁移支持
+- 所有现有脚本保持兼容
 
-### Compatibility
-- Compatible with CodeMCP v1.0+
-- Works with OpenClaw v1.0+
-- Tested on Ubuntu 20.04+, macOS 12+, WSL2
-- Supports bash 4.0+ and zsh
+## [1.0.0] - 2026-03-16
 
-### Security
-- No sensitive data storage
-- Git operations use local configuration
-- All external calls are validated
-- Problem reports contain no sensitive information
+### 🚀 初始发布
 
-### Performance
-- Low memory footprint (< 100MB)
-- Minimal CPU usage
-- Efficient task monitoring
-- Optimized git operations
+#### 核心功能
+- **结构化计划管理**: 四层数据模型 (System → Block → Feature → Test)
+- **AI协同工作流**: 任务分发、多Agent协调、状态监控
+- **自动化流程**: 自动Git提交、进度报告生成、失败处理
+- **开发者友好**: 简单CLI、问题报告、透明沟通
 
-### Known Issues
-- Initial setup requires manual CodeMCP configuration
-- Some advanced features require additional AI agent skills
-- Real-time notifications depend on external service configuration
+#### 工具脚本
+- `scripts/codemcp_planner.sh` - 主工作流管理器
+- `scripts/create_plan_template.sh` - 计划模板创建工具
+- `scripts/monitor_tasks.sh` - 任务监控工具
+- `scripts/auto_git_commit.sh` - 自动Git提交工具
+- `scripts/generate_report.sh` - 进度报告生成工具
+- `scripts/check_environment.sh` - 环境检查工具
+- `scripts/start_services.sh` - 服务启动工具
+- `scripts/problem_report.sh` - 问题报告工具
 
-### Migration Notes
-- This is the initial release, no migration needed
-- Future versions will maintain backward compatibility
-- Configuration format is stable
+#### 文档结构
+- `SKILL.md` - 主技能定义文档
+- `README.md` - 项目说明文档
+- `LICENSE` - MIT许可证
+- `PACKAGE_SUMMARY.md` - 技能包总结
+- 完整的使用示例和API参考
 
-### Acknowledgments
-- Thanks to the OpenClaw community for feedback
-- Built on the CodeMCP platform
-- Inspired by modern AI-assisted development workflows
+## 版本说明
 
----
+### 版本命名规则
+- **主版本号 (2.x.x)**: 不兼容的API变更或重大功能更新
+- **次版本号 (x.1.x)**: 向后兼容的功能性新增
+- **修订号 (x.x.1)**: 向后兼容的问题修正
 
-## Upgrade Instructions
+### 升级指南
+- **从 1.x.x 升级到 2.0.0**: 增强版功能需要重新初始化项目配置
+- **配置迁移**: 旧版配置文件可自动迁移到新版格式
+- **功能兼容**: 所有v1.0.0功能在v2.0.0中完全可用
 
-### From Previous Versions
-This is the initial release. No upgrade instructions needed.
+### 支持周期
+- **v2.0.0**: 长期支持版本 (LTS)，支持到2027-03-17
+- **v1.0.0**: 维护版本，关键安全修复到2026-06-17
 
-### Initial Setup
-1. Ensure CodeMCP is installed and configured
-2. Clone or download this skill package
-3. Set execute permissions: `chmod +x bin/* scripts/*.sh`
-4. Configure environment variables as needed
-5. Test with: `./bin/codemcp-planner check`
+## 未来计划
 
-### Configuration Migration
-- No migration needed for initial release
-- Future versions will provide migration tools
-- Configuration format is designed for stability
+### 短期目标 (v2.1.0)
+- [ ] 完善用户沟通和批准流程
+- [ ] 集成CodeMCP任务发送功能
+- [ ] 添加更多配置模板和示例
+- [ ] 优化错误处理和用户反馈
+
+### 中期目标 (v3.0.0)
+- [ ] 支持多项目并行管理
+- [ ] 集成更多AI agent平台
+- [ ] 提供Web管理界面
+- [ ] 实现自动化测试和部署
+
+### 长期愿景
+- [ ] 完整的AI协同开发生态系统
+- [ ] 跨平台支持和云集成
+- [ ] 智能优化和预测分析
+- [ ] 社区驱动的功能扩展
+
+## 贡献者
+
+感谢所有为这个项目做出贡献的人！
+
+### 核心团队
+- **OpenClaw AI** - 项目创建和维护
+- **CodeMCP Team** - 技术支持和集成
+
+### 特别感谢
+- 所有测试用户和反馈提供者
+- 开源社区的支持和贡献
+- 技术文档的编写和维护者
+
+## 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
 
 ---
 
-## Deprecations
-- No deprecated features in initial release
-
-## Removals
-- No removed features in initial release
-
-## Breaking Changes
-- No breaking changes in initial release
-
----
-
-## Roadmap
-
-### Planned for 1.1.0
-- Web dashboard interface
-- Multi-project management
-- Advanced analytics and metrics
-- Plugin system for extensions
-- More notification channels
-- Enhanced security features
-
-### Planned for 1.2.0
-- Team collaboration features
-- Advanced scheduling capabilities
-- Resource optimization
-- Predictive analytics
-- Machine learning enhancements
-
-### Long-term Vision
-- Full AI-powered project management
-- Integration with more AI agent platforms
-- Enterprise-grade features
-- Cloud-native deployment options
-- Advanced reporting and analytics
-
----
-
-## Support
-
-### Getting Help
-- Check the documentation first
-- Use the problem reporting script
-- Create GitHub issues for bugs
-- Join the OpenClaw Discord community
-
-### Reporting Issues
-1. Use: `./scripts/problem_report.sh`
-2. Or create a GitHub issue
-3. Include all relevant information
-4. Provide steps to reproduce
-
-### Feature Requests
-1. Check the roadmap
-2. Create a GitHub issue
-3. Describe the use case
-4. Suggest implementation ideas
-
----
-
-## Contributing
-See CONTRIBUTING.md for details on how to contribute to this project.
-
----
-
-*This changelog is automatically generated and manually maintained.*
+*此变更日志文件遵循 [Keep a Changelog](https://keepachangelog.com/) 格式，使用 [Semantic Versioning](https://semver.org/) 进行版本控制。*

@@ -1,10 +1,11 @@
-# CodeMCP Planner Skill
+# CodeMCP Planner Skill v2.0.0
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![OpenClaw](https://img.shields.io/badge/OpenClaw-Skill-orange)
+![Enhanced](https://img.shields.io/badge/增强版-功能完整-brightgreen)
 
-一个专业的AI协同设计规划器，负责管理完整的软件开发工作流：从需求分析到自动git提交的端到端生命周期管理。
+一个专业的AI协同设计规划器，负责管理完整的软件开发工作流：从需求分析到自动git提交的端到端生命周期管理。**v2.0.0增强版**新增项目记忆文件、配置管理、用户沟通批准等关键功能。
 
 ## 🎯 特性
 
@@ -52,6 +53,19 @@ cp -r . ~/tools/openclaw/skills/codemcp-planner
 ./bin/codemcp-planner check      # 检查环境
 ./bin/codemcp-planner start      # 启动服务
 ./bin/codemcp-planner plan       # 创建新计划
+```
+
+### 🚀 快速使用
+```bash
+# 1. 启动（推荐）
+./start.sh
+
+# 2. 或直接使用工作流
+./scripts/codemcp_planner.sh menu
+
+# 3. 命令行模式
+./scripts/codemcp_planner.sh init     # 初始化新项目
+./scripts/codemcp_planner.sh check    # 检查CodeMCP连接
 ```
 
 ### 5分钟示例

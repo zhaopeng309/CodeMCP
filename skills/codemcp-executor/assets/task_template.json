@@ -1,0 +1,48 @@
+{
+  "id": "TASK-{{ID}}",
+  "title": "{{TITLE}}",
+  "type": "feature",
+  "priority": "medium",
+  "description": "{{DESCRIPTION}}",
+  "commands": [
+    {
+      "command": "echo '准备执行任务: {{TITLE}}'",
+      "workdir": ".",
+      "timeout": 30,
+      "type": "setup",
+      "description": "任务初始化"
+    },
+    {
+      "command": "mkdir -p src tests",
+      "workdir": ".",
+      "timeout": 30,
+      "type": "setup",
+      "description": "创建目录结构"
+    }
+  ],
+  "dependencies": [
+    "python>=3.9",
+    "git"
+  ],
+  "tags": [
+    "{{TAG1}}",
+    "{{TAG2}}"
+  ],
+  "success_criteria": [
+    "所有命令执行成功",
+    "测试通过",
+    "代码符合规范"
+  ],
+  "metadata": {
+    "created_at": "{{TIMESTAMP}}",
+    "created_by": "planner-001",
+    "estimated_duration": "1小时",
+    "complexity": "medium",
+    "project": "{{PROJECT}}"
+  },
+  "environment": {
+    "os": ["linux", "darwin"],
+    "python": ">=3.9",
+    "memory": "1GB"
+  }
+}

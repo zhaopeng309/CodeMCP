@@ -1,0 +1,37 @@
+{
+  "server": {
+    "url": "http://localhost:8000",
+    "api_key": "YOUR_API_KEY_HERE",
+    "timeout": 30,
+    "retry_attempts": 3
+  },
+  "executor": {
+    "id": "executor-001",
+    "name": "AI Code Executor",
+    "role": "feature_implementation",
+    "capabilities": [
+      "python_development",
+      "testing",
+      "api_design"
+    ]
+  },
+  "polling": {
+    "enabled": true,
+    "interval": 5,
+    "max_empty_polls": 10
+  },
+  "execution": {
+    "max_retries": 3,
+    "retry_delay": 10,
+    "timeout": 300,
+    "workspace_dir": "/tmp/codemcp-workspace"
+  },
+  "testing": {
+    "framework": "pytest",
+    "coverage_threshold": 80
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "/var/log/codemcp-executor.log"
+  }
+}

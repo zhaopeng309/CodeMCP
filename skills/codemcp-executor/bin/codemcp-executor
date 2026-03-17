@@ -1,0 +1,332 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# CodeMCP Executor 主命令行工具
+# 提供执行器管理的统一命令行接口
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+SCRIPTS_DIR="$ROOT_DIR/scripts"
+
+# 颜色输出
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# 日志函数
+log() {
+    local level="$1"
+    local message="$2"
+
+    case "$level" in
+        "INFO") color="${BLUE}" ;;
+        "SUCCESS") color="${GREEN}" ;;
+        "WARNING") color="${YELLOW}" ;;
+        "ERROR") color="${RED}" ;;
+        *) color="${NC}" ;;
+    esac
+
+    echo -e "${color}[${level}]${NC} ${message}"
+}
+
+# 显示标题
+show_title() {
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════╗"
+    echo "║                  CodeMCP Executor CLI                    ║"
+    echo "║                 AI协同编程执行器命令行工具                ║"
+    echo "╚══════════════════════════════════════════════════════════╝"
+    echo ""
+}
+
+# 显示版本
+show_version() {
+    echo "CodeMCP Executor v1.0.0"
+    echo "Copyright (c) 2026 OpenClaw AI"
+    echo "MIT License"
+}
+
+# 检查脚本目录
+check_scripts_dir() {
+    if [[ ! -d "$SCRIPTS_DIR" ]]; then
+        log "ERROR" "脚本目录不存在: $SCRIPTS_DIR"
+        exit 1
+    fi
+}
+
+# 执行脚本
+run_script() {
+    local script_name="$1"
+    shift
+    local script_path="$SCRIPTS_DIR/$script_name"
+
+    if [[ ! -f "$script_path" ]]; then
+        log "ERROR" "脚本不存在: $script_name"
+        exit 1
+    fi
+
+    if [[ ! -x "$script_path" ]]; then
+        log "WARNING" "脚本不可执行，尝试添加执行权限: $script_name"
+        chmod +x "$script_path"
+    fi
+
+    # 执行脚本
+    "$script_path" "$@"
+}
+
+# 主循环模式
+main_loop() {
+    show_title
+
+    while true; do
+        echo ""
+        echo "请选择操作:"
+        echo "  1) 启动执行器服务"
+        echo "  2) 检查环境"
+        echo "  3) 获取任务"
+        echo "  4) 执行任务"
+        echo "  5) 运行测试"
+        echo "  6) 提交结果"
+        echo "  7) 查看状态"
+        echo "  8) 退出"
+        echo ""
+
+        read -p "请输入选项 (1-8): " choice
+
+        case "$choice" in
+            1)
+                echo ""
+                log "INFO" "启动执行器服务..."
+                run_script "codemcp_executor.sh" "start"
+                ;;
+            2)
+                echo ""
+                log "INFO" "检查环境..."
+                run_script "check_environment.sh" "full"
+                ;;
+            3)
+                echo ""
+                log "INFO" "获取任务..."
+                run_script "fetch_task.sh" "get"
+                ;;
+            4)
+                echo ""
+                log "INFO" "执行任务..."
+                read -p "请输入任务文件路径: " task_file
+                if [[ -n "$task_file" ]] && [[ -f "$task_file" ]]; then
+                    run_script "execute_task.sh" "run" "$task_file"
+                else
+                    log "ERROR" "任务文件不存在或未指定"
+                fi
+                ;;
+            5)
+                echo ""
+                log "INFO" "运行测试..."
+                read -p "请输入任务目录: " task_dir
+                if [[ -n "$task_dir" ]] && [[ -d "$task_dir" ]]; then
+                    run_script "run_tests.sh" "run" "$task_dir"
+                else
+                    log "ERROR" "任务目录不存在或未指定"
+                fi
+                ;;
+            6)
+                echo ""
+                log "INFO" "提交结果..."
+                read -p "请输入结果文件: " result_file
+                if [[ -n "$result_file" ]] && [[ -f "$result_file" ]]; then
+                    run_script "submit_result.sh" "submit" "$result_file"
+                else
+                    log "ERROR" "结果文件不存在或未指定"
+                fi
+                ;;
+            7)
+                echo ""
+                log "INFO" "查看状态..."
+                run_script "codemcp_executor.sh" "status"
+                ;;
+            8)
+                echo ""
+                log "INFO" "退出 CodeMCP Executor"
+                exit 0
+                ;;
+            *)
+                echo ""
+                log "ERROR" "无效选项，请重新选择"
+                ;;
+        esac
+    done
+}
+
+# 命令行模式
+cli_mode() {
+    check_scripts_dir
+
+    case "${1:-}" in
+        "start"|"run")
+            log "INFO" "启动执行器服务..."
+            run_script "codemcp_executor.sh" "start"
+            ;;
+        "stop")
+            log "INFO" "停止执行器服务..."
+            # TODO: 实现停止功能
+            log "WARNING" "停止功能尚未实现，请使用 Ctrl+C 终止进程"
+            ;;
+        "check"|"test")
+            log "INFO" "检查环境..."
+            run_script "check_environment.sh" "full"
+            ;;
+        "fetch"|"get")
+            local task_type="${2:-}"
+            local priority="${3:-}"
+            log "INFO" "获取任务..."
+            run_script "fetch_task.sh" "get" "$task_type" "$priority"
+            ;;
+        "execute"|"exec")
+            local task_file="${2:-}"
+            if [[ -z "$task_file" ]]; then
+                log "ERROR" "请指定任务文件"
+                echo "用法: $0 execute <任务文件>"
+                exit 1
+            fi
+            log "INFO" "执行任务..."
+            run_script "execute_task.sh" "run" "$task_file"
+            ;;
+        "test"|"run-test")
+            local task_dir="${2:-}"
+            local framework="${3:-auto}"
+            if [[ -z "$task_dir" ]]; then
+                log "ERROR" "请指定任务目录"
+                echo "用法: $0 test <任务目录> [框架]"
+                exit 1
+            fi
+            log "INFO" "运行测试..."
+            run_script "run_tests.sh" "run" "$task_dir" "$framework"
+            ;;
+        "submit")
+            local result_file="${2:-}"
+            local task_dir="${3:-}"
+            if [[ -z "$result_file" ]]; then
+                log "ERROR" "请指定结果文件"
+                echo "用法: $0 submit <结果文件> [任务目录]"
+                exit 1
+            fi
+            log "INFO" "提交结果..."
+            run_script "submit_result.sh" "submit" "$result_file" "$task_dir"
+            ;;
+        "status")
+            log "INFO" "查看状态..."
+            run_script "codemcp_executor.sh" "status"
+            ;;
+        "monitor"|"watch")
+            log "INFO" "监控执行状态..."
+            # TODO: 实现监控功能
+            log "WARNING" "监控功能尚未实现"
+            ;;
+        "logs")
+            local log_file="${HOME}/.codemcp-executor.log"
+            if [[ -f "$log_file" ]]; then
+                tail -f "$log_file"
+            else
+                log "WARNING" "日志文件不存在: $log_file"
+            fi
+            ;;
+        "config")
+            local config_dir="${HOME}/.config/codemcp-executor"
+            local config_file="$config_dir/config.json"
+            if [[ -f "$config_file" ]]; then
+                cat "$config_file" | jq .
+            else
+                log "WARNING" "配置文件不存在: $config_file"
+                echo "创建默认配置..."
+                mkdir -p "$config_dir"
+                cat > "$config_file" << EOF
+{
+  "server": {
+    "url": "http://localhost:8000",
+    "api_key": ""
+  },
+  "executor": {
+    "id": "executor-001",
+    "name": "AI Code Executor"
+  }
+}
+EOF
+                cat "$config_file" | jq .
+            fi
+            ;;
+        "interactive"|"ui")
+            main_loop
+            ;;
+        "version"|"-v"|"--version")
+            show_version
+            ;;
+        "help"|"-h"|"--help"|"")
+            show_title
+            echo "用法: codemcp-executor <命令> [参数]"
+            echo ""
+            echo "核心命令:"
+            echo "  start                         启动执行器服务（自动轮询）"
+            echo "  check                         检查环境和连接"
+            echo "  fetch [类型] [优先级]         获取任务"
+            echo "  execute <任务文件>            执行任务"
+            echo "  test <任务目录> [框架]        运行测试"
+            echo "  submit <结果文件> [目录]      提交结果"
+            echo "  status                        查看执行器状态"
+            echo ""
+            echo "工具命令:"
+            echo "  config                        查看和编辑配置"
+            echo "  logs                          查看实时日志"
+            echo "  monitor                       监控执行状态"
+            echo ""
+            echo "界面命令:"
+            echo "  interactive                   启动交互式界面"
+            echo ""
+            echo "信息命令:"
+            echo "  version                       显示版本信息"
+            echo "  help                          显示帮助信息"
+            echo ""
+            echo "示例:"
+            echo "  codemcp-executor start        启动执行器"
+            echo "  codemcp-executor fetch        获取任务"
+            echo "  codemcp-executor check        检查环境"
+            echo "  codemcp-executor interactive  交互式界面"
+            echo ""
+            echo "环境变量:"
+            echo "  CODEMCP_SERVER_URL           服务器地址"
+            echo "  CODEMCP_API_KEY              API密钥"
+            echo "  EXECUTOR_ID                  执行器ID"
+            echo ""
+            exit 0
+            ;;
+        *)
+            log "ERROR" "未知命令: $1"
+            echo "使用: $0 help 查看可用命令"
+            exit 1
+            ;;
+    esac
+}
+
+# 主入口
+main() {
+    # 如果没有任何参数或者第一个参数是 interactive/ui，进入主循环
+    if [[ $# -eq 0 ]] || [[ "$1" == "interactive" ]] || [[ "$1" == "ui" ]]; then
+        if [[ $# -eq 0 ]]; then
+            # 无参数时，默认进入交互模式
+            main_loop
+        else
+            # 明确指定交互模式
+            main_loop
+        fi
+    else
+        # 命令行模式
+        cli_mode "$@"
+    fi
+}
+
+# 捕获退出信号
+trap 'echo -e "\n${YELLOW}[INFO]${NC} 正在退出 CodeMCP Executor..."; exit 0' INT TERM
+
+# 运行主函数
+main "$@"
