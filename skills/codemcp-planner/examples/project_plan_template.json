@@ -1,0 +1,160 @@
+{
+  "system_name": "用户管理系统",
+  "description": "完整的用户认证和权限管理系统，支持用户注册、登录、权限管理、个人资料管理等功能。",
+  "version": "1.0.0",
+  "created_at": "2026-03-17T08:00:00Z",
+  "author": "AI Developer",
+  "repository": "https://github.com/example/user-management-system",
+  "blocks": [
+    {
+      "name": "用户认证",
+      "description": "用户注册、登录、会话管理功能",
+      "priority": 0,
+      "estimated_hours": 8,
+      "features": [
+        {
+          "name": "用户注册",
+          "description": "新用户注册功能，支持邮箱和密码注册",
+          "test_command": "pytest tests/auth/test_registration.py -v",
+          "priority": 0,
+          "estimated_hours": 2,
+          "dependencies": []
+        },
+        {
+          "name": "用户登录",
+          "description": "用户登录功能，支持邮箱/密码登录",
+          "test_command": "pytest tests/auth/test_login.py -v",
+          "priority": 0,
+          "estimated_hours": 2,
+          "dependencies": ["用户注册"]
+        },
+        {
+          "name": "会话管理",
+          "description": "用户会话和令牌管理",
+          "test_command": "pytest tests/auth/test_session.py -v",
+          "priority": 1,
+          "estimated_hours": 2,
+          "dependencies": ["用户登录"]
+        },
+        {
+          "name": "密码重置",
+          "description": "密码重置和找回功能",
+          "test_command": "pytest tests/auth/test_password_reset.py -v",
+          "priority": 2,
+          "estimated_hours": 2,
+          "dependencies": ["用户注册"]
+        }
+      ]
+    },
+    {
+      "name": "用户管理",
+      "description": "用户信息管理和权限控制",
+      "priority": 1,
+      "estimated_hours": 6,
+      "features": [
+        {
+          "name": "个人资料",
+          "description": "用户个人资料查看和编辑",
+          "test_command": "pytest tests/user/test_profile.py -v",
+          "priority": 0,
+          "estimated_hours": 2,
+          "dependencies": ["用户登录"]
+        },
+        {
+          "name": "权限管理",
+          "description": "用户角色和权限管理",
+          "test_command": "pytest tests/user/test_permissions.py -v",
+          "priority": 1,
+          "estimated_hours": 2,
+          "dependencies": ["个人资料"]
+        },
+        {
+          "name": "用户列表",
+          "description": "管理员查看用户列表",
+          "test_command": "pytest tests/user/test_user_list.py -v",
+          "priority": 2,
+          "estimated_hours": 2,
+          "dependencies": ["权限管理"]
+        }
+      ]
+    },
+    {
+      "name": "API接口",
+      "description": "RESTful API接口",
+      "priority": 2,
+      "estimated_hours": 4,
+      "features": [
+        {
+          "name": "认证API",
+          "description": "用户认证相关的API接口",
+          "test_command": "pytest tests/api/test_auth_api.py -v",
+          "priority": 0,
+          "estimated_hours": 2,
+          "dependencies": ["用户登录", "会话管理"]
+        },
+        {
+          "name": "用户API",
+          "description": "用户管理相关的API接口",
+          "test_command": "pytest tests/api/test_user_api.py -v",
+          "priority": 1,
+          "estimated_hours": 2,
+          "dependencies": ["个人资料", "权限管理"]
+        }
+      ]
+    },
+    {
+      "name": "前端界面",
+      "description": "用户界面和交互",
+      "priority": 3,
+      "estimated_hours": 6,
+      "features": [
+        {
+          "name": "登录页面",
+          "description": "用户登录页面",
+          "test_command": "npm test -- tests/login.test.js",
+          "priority": 0,
+          "estimated_hours": 2,
+          "dependencies": ["用户登录"]
+        },
+        {
+          "name": "注册页面",
+          "description": "用户注册页面",
+          "test_command": "npm test -- tests/register.test.js",
+          "priority": 0,
+          "estimated_hours": 2,
+          "dependencies": ["用户注册"]
+        },
+        {
+          "name": "个人资料页面",
+          "description": "个人资料管理页面",
+          "test_command": "npm test -- tests/profile.test.js",
+          "priority": 1,
+          "estimated_hours": 2,
+          "dependencies": ["个人资料", "登录页面"]
+        }
+      ]
+    }
+  ],
+  "technology_stack": {
+    "backend": ["Python", "Flask", "SQLAlchemy", "JWT"],
+    "frontend": ["HTML", "CSS", "JavaScript", "React"],
+    "database": ["SQLite", "PostgreSQL"],
+    "testing": ["pytest", "Jest", "Cypress"],
+    "devops": ["Docker", "GitHub Actions", "Nginx"]
+  },
+  "requirements": [
+    "支持用户注册和登录",
+    "实现权限管理系统",
+    "提供RESTful API",
+    "响应式前端界面",
+    "完整的测试覆盖",
+    "文档齐全"
+  ],
+  "success_criteria": [
+    "所有测试通过",
+    "代码覆盖率 > 80%",
+    "API响应时间 < 200ms",
+    "用户界面友好易用",
+    "文档完整准确"
+  ]
+}
