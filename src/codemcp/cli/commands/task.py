@@ -24,6 +24,78 @@ manager = get_api_manager()
 
 
 @app.command()
+def list(
+    status: Optional[str] = typer.Option(
+        None,
+        "--status",
+        "-s",
+        help="按状态过滤任务 (pending, running, completed, failed)",
+    ),
+    feature_id: Optional[str] = typer.Option(
+        None,
+        "--feature",
+        "-f",
+        help="按功能点ID过滤任务",
+    ),
+    page: int = typer.Option(
+        1,
+        "--page",
+        "-p",
+        help="页码",
+        min=1,
+    ),
+    page_size: int = typer.Option(
+        20,
+        "--page-size",
+        "-n",
+        help="每页数量",
+        min=1,
+        max=100,
+    ),
+):
+    """列出任务"""
+    console.print("[bold green]任务列表[/bold green]")
+    
+    try:
+        # 使用API获取任务列表
+        tasks_data = manager.client.get_tasks(
+            feature_id=feature_id,
+            status=status,
+            page=page,
+            page_size=page_size,
+        )
+        
+        tasks = tasks_data.get("tests", [])
+        total = tasks_data.get("total", len(tasks))
+        
+        if not tasks:
+            console.print(formatter.format_info_message("没有找到任务"))
+            return
+        
+        # 使用格式化器显示表格
+        table = formatter.format_task_table(tasks)
+        console.print(table)
+        
+        # 显示分页信息
+        console.print(f"\n[dim]显示第 {page} 页，共 {total} 个任务[/dim]")
+        if total > page_size:
+            total_pages = (total + page_size - 1) // page_size
+            console.print(f"[dim]共 {total_pages} 页[/dim]")
+        
+    except Exception as e:
+        console.print(formatter.format_warning_message(f"获取任务列表失败，使用模拟数据: {e}"))
+        # 使用回退数据
+        tasks_data = manager.get_tasks_with_fallback()
+        tasks = tasks_data.get("tests", [])
+        
+        if tasks:
+            table = formatter.format_task_table(tasks)
+            console.print(table)
+        else:
+            console.print(formatter.format_info_message("没有找到任务"))
+
+
+@app.command()
 def show(
     task_id: str = typer.Argument(..., help="任务ID"),
 ):
@@ -152,6 +224,80 @@ def logs(
         console.print(f"[white]{timestamp} [INFO][/white] 日志条目 {i+1}: 任务执行中...")
 
     console.print(f"[dim]执行完成: {time.strftime('%Y-%m-%d %H:%M:%S')}[/dim]")
+
+
+@app.command()
+def update(
+    task_id: str = typer.Argument(..., help="任务ID"),
+    priority: Optional[int] = typer.Option(
+        None,
+        "--priority",
+        "-p",
+        help="优先级（数字越小优先级越高）",
+    ),
+    max_retries: Optional[int] = typer.Option(
+        None,
+        "--max-retries",
+        "-m",
+        help="最大重试次数",
+        min=0,
+        max=10,
+    ),
+    timeout: Optional[int] = typer.Option(
+        None,
+        "--timeout",
+        "-t",
+        help="超时时间（秒）",
+        min=1,
+    ),
+    description: Optional[str] = typer.Option(
+        None,
+        "--description",
+        "-d",
+        help="任务描述",
+    ),
+):
+    """更新任务属性"""
+    console.print(f"[bold green]更新任务[/bold green] - {task_id}")
+    
+    # 检查是否有任何更新字段
+    update_fields = {}
+    if priority is not None:
+        update_fields["priority"] = priority
+    if max_retries is not None:
+        update_fields["max_retries"] = max_retries
+    if timeout is not None:
+        update_fields["timeout"] = timeout
+    if description is not None:
+        update_fields["description"] = description
+    
+    if not update_fields:
+        console.print(formatter.format_warning_message("没有提供任何更新字段"))
+        console.print("请至少提供一个更新选项")
+        raise typer.Exit(1)
+    
+    # 显示将要更新的字段
+    console.print("将要更新的字段:")
+    for key, value in update_fields.items():
+        console.print(f"  {key}: {value}")
+    
+    confirm = typer.confirm(f"确定要更新任务 {task_id} 吗？")
+    if not confirm:
+        console.print("[yellow]操作已取消[/yellow]")
+        return
+
+    try:
+        # 使用API更新任务
+        response = manager.client.update_task(task_id, **update_fields)
+        
+        console.print(formatter.format_success_message("任务更新成功！"))
+        console.print(f"任务ID: {response.get('id', '未知')}")
+        console.print(f"状态: {response.get('status', '未知')}")
+        
+    except Exception as e:
+        console.print(formatter.format_error_message(f"更新任务失败: {e}"))
+        console.print("请检查任务ID是否正确，或任务状态是否允许更新")
+        raise typer.Exit(1)
 
 
 @app.command()

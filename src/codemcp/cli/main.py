@@ -84,10 +84,47 @@ def about():
 @app.command()
 def status():
     """显示系统状态"""
-    # 待实现 - 调用 API 获取状态
-    console.print("[bold yellow]系统状态[/bold yellow]")
-    console.print("功能尚未实现")
-    console.print("请使用 'codemcp monitor' 进行实时监控")
+    from .api_client import get_api_manager, formatter
+    
+    console.print("[bold green]系统状态[/bold green]")
+    
+    try:
+        manager = get_api_manager()
+        status_data = manager.client.get_system_status()
+        
+        # 显示状态信息
+        table = Table(show_header=False)
+        table.add_column("项目", style="cyan")
+        table.add_column("值", style="green")
+        
+        table.add_row("服务状态", status_data.get("status", "未知"))
+        table.add_row("服务名称", status_data.get("service", "未知"))
+        table.add_row("数据库状态", status_data.get("database", "未知"))
+        
+        # 显示统计信息
+        stats = status_data.get("statistics", {})
+        if stats:
+            table.add_row("系统数量", str(stats.get("systems", 0)))
+            task_stats = stats.get("tasks", {})
+            table.add_row("总任务数", str(task_stats.get("total", 0)))
+            table.add_row("成功率", f"{task_stats.get('success_rate', 0)}%")
+        
+        table.add_row("时间戳", status_data.get("timestamp", "未知"))
+        
+        console.print(table)
+        
+        # 显示健康状态
+        if status_data.get("status") == "operational":
+            console.print(formatter.format_success_message("系统运行正常"))
+        elif status_data.get("status") == "degraded":
+            console.print(formatter.format_warning_message("系统运行降级"))
+        else:
+            console.print(formatter.format_error_message("系统状态异常"))
+            
+    except Exception as e:
+        console.print(formatter.format_error_message(f"获取系统状态失败: {e}"))
+        console.print("请检查API服务器是否正在运行")
+        sys.exit(1)
 
 
 @app.command()
