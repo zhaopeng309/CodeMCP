@@ -134,3 +134,7 @@ LOG_FORMAT=json
 #
 # 注意: 敏感信息 (如密码、密钥) 不应提交到版本控制系统
 # 建议将 .codemcp 添加到 .gitignore 文件
+
+# 用户账户配置
+# 格式: USER_TOKEN_用户名=JWT令牌
+USER_TOKEN_ADMIN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1OWZkZWY5Ni0xZDExLTQ2MzQtYmIzOS05YjU3MzU2ODY0Y2QiLCJ1c2VybmFtZSI6ImFkbWluIiwiZW1haWwiOiJhZG1pbkBleGFtcGxlLmNvbSIsImlzX3N1cGVydXNlciI6dHJ1ZSwiaWF0IjoxNzczODA0Nzg5LCJqdGkiOiJlM2IxY2ZjNS0wMmIyLTRjZTMtODNhYS0zZjVmYmJkYzMwMzUiLCJ0eXBlIjoiYWNjZXNzIn0.GtRdTdQ_Sg58VxCPajGVPyRecpzp2rm-hhULJT2a-_Y
