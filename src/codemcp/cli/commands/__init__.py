@@ -8,6 +8,7 @@ __all__ = [
     "config",
     "monitor",
     "queue",
+    "server",
     "status",
     "system",
     "task",

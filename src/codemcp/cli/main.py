@@ -290,6 +290,7 @@ def config(
 try:
     from .commands import monitor as monitor_commands
     from .commands import queue as queue_commands
+    from .commands import server as server_commands
     from .commands import status as status_commands
     from .commands import system as system_commands
     from .commands import task as task_commands
@@ -305,6 +306,11 @@ try:
         queue_commands.app,
         name="queue",
         help="队列管理命令",
+    )
+    app.add_typer(
+        server_commands.app,
+        name="server",
+        help="服务器管理命令",
     )
     app.add_typer(
         status_commands.app,

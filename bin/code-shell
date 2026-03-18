@@ -90,6 +90,7 @@ class CodeShell:
             "queue": self.cmd_queue,
             "system": self.cmd_system,
             "user": self.cmd_user,
+            "server": self.cmd_server,
         }
         
         # 帮助信息
@@ -109,6 +110,7 @@ CodeMCP Shell - 可用命令:
     queue                   - 队列管理
     system                  - 系统管理
     user                    - 用户管理（创建、登录等）
+    server                  - 服务器管理（启动、停止、重启等）
     
   直接执行:
     输入任何其他命令将尝试作为系统命令执行
@@ -386,6 +388,151 @@ CodeMCP Shell - 可用命令:
         print("")
         print("要登录管理员账户，请运行:")
         print("  codemcp user login")
+
+    def cmd_server(self, args: List[str]) -> None:
+        """服务器管理命令"""
+        if not args:
+            print("服务器管理命令:")
+            print("  用法: server <子命令> [参数]")
+            print("  可用子命令:")
+            print("    status                  - 检查服务器状态")
+            print("    start [--port PORT]     - 启动API服务器")
+            print("    stop [--force]          - 停止API服务器")
+            print("    restart [--port PORT]   - 重启API服务器")
+            print("    logs [--lines N]        - 查看服务器日志")
+            print("    help                    - 显示此帮助")
+            return
+        
+        subcommand = args[0].lower()
+        
+        if subcommand == "status":
+            self._server_status(args[1:])
+        elif subcommand == "start":
+            self._server_start(args[1:])
+        elif subcommand == "stop":
+            self._server_stop(args[1:])
+        elif subcommand == "restart":
+            self._server_restart(args[1:])
+        elif subcommand == "logs":
+            self._server_logs(args[1:])
+        elif subcommand == "help":
+            print("服务器管理命令:")
+            print("  用法: server <子命令> [参数]")
+            print("  可用子命令:")
+            print("    status                  - 检查服务器状态")
+            print("    start [--port PORT]     - 启动API服务器")
+            print("    stop [--force]          - 停止API服务器")
+            print("    restart [--port PORT]   - 重启API服务器")
+            print("    logs [--lines N]        - 查看服务器日志")
+        else:
+            print(f"未知的子命令: {subcommand}")
+            print("使用 'server help' 查看可用命令")
+
+    def _server_status(self, args: List[str]) -> None:
+        """检查服务器状态"""
+        print("检查CodeMCP API服务器状态...")
+        # 调用实际的CLI命令
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["codemcp", "server", "status"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            print(result.stdout)
+            if result.stderr:
+                print(result.stderr)
+        except Exception as e:
+            print(f"检查服务器状态失败: {e}")
+
+    def _server_start(self, args: List[str]) -> None:
+        """启动服务器"""
+        print("启动CodeMCP API服务器...")
+        # 构建参数
+        cmd_args = ["codemcp", "server", "start"]
+        cmd_args.extend(args)
+        
+        import subprocess
+        try:
+            # 在后台启动
+            result = subprocess.run(
+                cmd_args,
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            print(result.stdout)
+            if result.stderr:
+                print(result.stderr)
+        except subprocess.TimeoutExpired:
+            print("服务器启动中...（进程在后台运行）")
+            print("使用 'server status' 检查状态")
+        except Exception as e:
+            print(f"启动服务器失败: {e}")
+
+    def _server_stop(self, args: List[str]) -> None:
+        """停止服务器"""
+        print("停止CodeMCP API服务器...")
+        # 构建参数
+        cmd_args = ["codemcp", "server", "stop"]
+        cmd_args.extend(args)
+        
+        import subprocess
+        try:
+            result = subprocess.run(
+                cmd_args,
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            print(result.stdout)
+            if result.stderr:
+                print(result.stderr)
+        except Exception as e:
+            print(f"停止服务器失败: {e}")
+
+    def _server_restart(self, args: List[str]) -> None:
+        """重启服务器"""
+        print("重启CodeMCP API服务器...")
+        # 构建参数
+        cmd_args = ["codemcp", "server", "restart"]
+        cmd_args.extend(args)
+        
+        import subprocess
+        try:
+            result = subprocess.run(
+                cmd_args,
+                capture_output=True,
+                text=True,
+                timeout=15
+            )
+            print(result.stdout)
+            if result.stderr:
+                print(result.stderr)
+        except Exception as e:
+            print(f"重启服务器失败: {e}")
+
+    def _server_logs(self, args: List[str]) -> None:
+        """查看服务器日志"""
+        print("查看服务器日志...")
+        # 构建参数
+        cmd_args = ["codemcp", "server", "logs"]
+        cmd_args.extend(args)
+        
+        import subprocess
+        try:
+            result = subprocess.run(
+                cmd_args,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            print(result.stdout)
+            if result.stderr:
+                print(result.stderr)
+        except Exception as e:
+            print(f"查看日志失败: {e}")
 
     def execute_system_command(self, command: str) -> None:
         """执行系统命令"""
