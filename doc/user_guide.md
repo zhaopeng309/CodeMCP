@@ -307,6 +307,118 @@ curl http://localhost:8000/auth/me
 - **可撤销**：通过数据库记录支持令牌撤销
 - **Bearer 格式**：使用标准的 `Authorization: Bearer <token>` 头
 
+#### CLI 工具的项目级配置
+
+CodeMCP 的 CLI 工具支持项目级配置文件，允许在不同项目中使用不同的配置。这对于多项目环境特别有用，每个项目可以有自己的认证配置、数据库连接等。
+
+##### 配置文件优先级
+
+CLI 工具按照以下优先级顺序加载配置文件（后读取的覆盖先读取的）：
+
+1. **安装目录（CODEMCP_HOME）的 `.codemcp` 文件**（先读取）
+2. **当前工作目录的 `.codemcp` 文件**（后读取，可以覆盖安装目录的配置）
+3. **环境变量**
+4. **默认值**
+
+**注意**：pydantic-settings 会按顺序读取配置文件，后读取的文件会覆盖先读取的文件中的相同配置项。
+
+##### 自动配置文件管理
+
+当你在项目目录中运行 CLI 工具时，系统会自动处理配置文件：
+
+1. **检查当前目录**：如果当前目录没有 `.codemcp` 文件
+2. **从安装目录拷贝**：如果安装目录有 `.codemcp` 文件，自动拷贝到当前目录
+3. **创建默认配置**：如果安装目录也没有配置文件，创建一个包含默认值的配置文件
+
+##### 使用示例
+
+```bash
+# 1. 进入项目目录
+cd /path/to/your/project
+
+# 2. 运行 CLI 工具（首次运行会自动创建配置文件）
+codemcp status
+
+# 3. 查看自动创建的配置文件
+cat .codemcp
+
+# 4. 编辑项目级配置
+nano .codemcp
+```
+
+##### 配置环境变量
+
+为了支持项目级配置，需要设置 `CODEMCP_HOME` 环境变量指向安装目录：
+
+```bash
+# 在 ~/.bashrc 或 ~/.zshrc 中添加
+export CODEMCP_HOME="/path/to/CodeMCP/installation"
+
+# 或者在运行命令时临时设置
+CODEMCP_HOME="/path/to/CodeMCP/installation" codemcp status
+```
+
+##### 项目级配置示例
+
+创建 `.codemcp` 文件来覆盖全局配置：
+
+```bash
+# 项目级配置文件示例 (.codemcp)
+
+# 认证配置（覆盖全局配置）
+AUTH_ENABLED=false  # 本项目禁用认证
+SECRET_KEY=project-specific-secret-key
+
+# 数据库配置（使用项目特定的数据库）
+DATABASE_URL=sqlite:///./myproject.db
+
+# 服务器配置
+HOST=127.0.0.1
+PORT=9000
+
+# 任务执行配置
+TASK_WINDOW_DEPTH=3
+MAX_RETRY_COUNT=2
+```
+
+##### 配置覆盖规则
+
+假设有以下配置：
+
+1. **全局配置**（安装目录的 `.codemcp`）：
+   ```bash
+   AUTH_ENABLED=true
+   SECRET_KEY=global-secret-key
+   DATABASE_URL=sqlite:///./global.db
+   PORT=8000
+   ```
+
+2. **项目配置**（当前目录的 `.codemcp`）：
+   ```bash
+   AUTH_ENABLED=false
+   DATABASE_URL=sqlite:///./myproject.db
+   ```
+
+**最终生效的配置**：
+- `AUTH_ENABLED=false`（项目级配置覆盖全局配置）
+- `SECRET_KEY=global-secret-key`（使用全局配置，项目未覆盖）
+- `DATABASE_URL=sqlite:///./myproject.db`（项目级配置覆盖全局配置）
+- `PORT=8000`（使用全局配置，项目未覆盖）
+
+##### 最佳实践
+
+1. **敏感信息管理**：
+   - 将 `.codemcp` 文件添加到 `.gitignore` 中，避免提交敏感信息
+   - 使用环境变量或密钥管理服务存储生产环境的密钥
+
+2. **团队协作**：
+   - 提供 `.codemcp.example` 模板文件，包含配置说明但不包含敏感信息
+   - 新成员可以通过复制模板快速配置
+
+3. **多环境支持**：
+   - 为开发、测试、生产环境创建不同的配置文件
+   - 使用环境变量切换配置文件
+
 ### 主要 API 端点
 
 #### 系统管理
