@@ -50,22 +50,30 @@ def setup_logging(
     
     # 设置日志格式
     if log_format == "json":
-        import json
-        from pythonjsonlogger import jsonlogger
-        
-        class CustomJsonFormatter(jsonlogger.JsonFormatter):
-            def add_fields(self, log_record, record, message_dict):
-                super().add_fields(log_record, record, message_dict)
-                log_record["timestamp"] = record.created
-                log_record["level"] = record.levelname
-                log_record["logger"] = record.name
-                log_record["module"] = record.module
-                log_record["function"] = record.funcName
-                log_record["line"] = record.lineno
-        
-        formatter = CustomJsonFormatter(
-            "%(timestamp)s %(level)s %(logger)s %(module)s %(function)s %(line)s %(message)s"
-        )
+        try:
+            import json
+            from pythonjsonlogger import jsonlogger
+            
+            class CustomJsonFormatter(jsonlogger.JsonFormatter):
+                def add_fields(self, log_record, record, message_dict):
+                    super().add_fields(log_record, record, message_dict)
+                    log_record["timestamp"] = record.created
+                    log_record["level"] = record.levelname
+                    log_record["logger"] = record.name
+                    log_record["module"] = record.module
+                    log_record["function"] = record.funcName
+                    log_record["line"] = record.lineno
+            
+            formatter = CustomJsonFormatter(
+                "%(timestamp)s %(level)s %(logger)s %(module)s %(function)s %(line)s %(message)s"
+            )
+        except ImportError:
+            # 如果 pythonjsonlogger 不可用，回退到文本格式
+            logging.warning("pythonjsonlogger not installed, falling back to text format")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(funcName)s:%(lineno)d - %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S"
+            )
     else:
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(funcName)s:%(lineno)d - %(message)s",

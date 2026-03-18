@@ -36,7 +36,7 @@ class APIClientManager:
         """创建API客户端"""
         base_url = self.config.get("api.base_url", "http://localhost:8000")
         api_prefix = self.config.get("api.api_prefix", "/api/v1")
-        timeout = self.config.get("api.timeout", 30.0)
+        timeout = self.config.get("api.timeout", 5.0)  # 减少默认超时时间从30秒到5秒
         api_key = self.config.get("auth.token")
         
         # 构建完整的API URL
