@@ -50,6 +50,28 @@ class Settings(BaseSettings):
     log_file: Optional[str] = Field(default=None, description="日志文件路径")
     log_format: str = Field(default="json", description="日志格式", pattern="^(json|text)$")
 
+    # 认证配置
+    auth_enabled: bool = Field(
+        default=True,
+        description="是否启用认证。如果禁用，所有 API 都不需要认证；如果启用，需要 JWT 令牌"
+    )
+    
+    # JWT 认证配置（当 auth_enabled=True 时生效）
+    secret_key: str = Field(
+        default="your-secret-key-here-change-in-production",
+        description="JWT 签名密钥，至少8个字符",
+    )
+    jwt_algorithm: str = Field(
+        default="HS256",
+        description="JWT 算法",
+        pattern="^(HS256|HS384|HS512|RS256|RS384|RS512|ES256|ES384|ES512)$",
+    )
+
+    # 初始管理员账户（可选，当 auth_enabled=True 时生效）
+    admin_username: str = Field(default="admin", description="初始管理员用户名")
+    admin_password: str = Field(default="admin123", description="初始管理员密码")
+    admin_email: str = Field(default="admin@example.com", description="初始管理员邮箱")
+
     @classmethod
     def parse_cors_origins(cls, v: str) -> List[str]:
         """解析 CORS_ORIGINS 环境变量"""

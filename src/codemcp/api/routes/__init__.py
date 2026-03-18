@@ -13,6 +13,7 @@ from .tasks import router as tasks_router
 from .queue import router as queue_router
 from .status import router as status_router
 from .events import router as events_router
+from .auth import router as auth_router
 from ...mcp.server import router as mcp_router
 
 # 创建主路由器
@@ -26,6 +27,7 @@ api_router.include_router(tasks_router)
 api_router.include_router(queue_router)
 api_router.include_router(status_router)
 api_router.include_router(events_router)
+api_router.include_router(auth_router)
 api_router.include_router(mcp_router)
 
 __all__ = [
@@ -37,5 +39,6 @@ __all__ = [
     "queue_router",
     "status_router",
     "events_router",
+    "auth_router",
     "mcp_router",
 ]

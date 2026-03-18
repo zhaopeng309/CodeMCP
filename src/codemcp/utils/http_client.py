@@ -43,6 +43,7 @@ class APIClient:
             base_url=self.base_url,
             timeout=timeout,
             headers=self._get_headers(),
+            follow_redirects=True,
         )
         logger.info(f"初始化API客户端，基础URL: {self.base_url}")
     
@@ -58,6 +59,26 @@ class APIClient:
     
     def _handle_response(self, response: httpx.Response) -> Dict[str, Any]:
         """处理HTTP响应"""
+        # 检查状态码
+        status_code = response.status_code
+        
+        # 如果是重定向状态码（3xx），不调用raise_for_status()，因为它会对3xx状态码引发异常
+        # 注意：httpx的raise_for_status()实际上只对4xx和5xx状态码引发异常，
+        # 但为了安全起见，我们单独处理3xx状态码
+        if 300 <= status_code < 400:
+            logger.warning(
+                f"收到重定向响应 {status_code}，重定向到: {response.headers.get('location', '未知')}"
+            )
+            # 对于重定向响应，我们返回一个错误字典，而不是引发异常
+            # 这样上层代码可以决定如何处理
+            return {
+                "error": "redirect",
+                "status_code": status_code,
+                "location": response.headers.get('location'),
+                "message": f"重定向响应 '{status_code} {response.reason_phrase}' for url '{response.url}'"
+            }
+        
+        # 对于非3xx状态码，正常处理
         try:
             response.raise_for_status()
             return response.json()
@@ -187,7 +208,7 @@ class APIClient:
     
     def get_system_status(self) -> Dict[str, Any]:
         """获取系统状态"""
-        response = self.client.get("/status/system")
+        response = self.client.get("/status/")
         return self._handle_response(response)
     
     def close(self):
@@ -225,6 +246,7 @@ class AsyncAPIClient:
             base_url=self.base_url,
             timeout=timeout,
             headers=self._get_headers(),
+            follow_redirects=True,
         )
         logger.info(f"初始化异步API客户端，基础URL: {self.base_url}")
     

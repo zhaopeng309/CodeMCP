@@ -222,7 +222,9 @@ class MCPServer:
 
             # 使用核心Planner创建计划
             logger.info(f"使用核心Planner为系统 {system_name} 创建计划...")
-            blocks = await planner.create_plan(system, system_description)
+            # 确保 description 不是 None
+            description = system_description or f"系统 {system_name} 的计划"
+            blocks = await planner.create_plan(system, description)
 
             # 保存生成的模块到数据库
             saved_blocks = []
@@ -543,13 +545,59 @@ async def websocket_endpoint(
 
 
 @router.post("/planner/plan")
-async def create_plan_via_http():
-    """通过 HTTP 创建计划（兼容性端点）"""
-    # 待实现
-    raise HTTPException(
-        status_code=501,
-        detail="HTTP 端点尚未实现，请使用 WebSocket 接口",
-    )
+async def create_plan_via_http(
+    system_id: str,
+    description: str,
+):
+    """通过 HTTP 创建计划（兼容性端点）
+    
+    Args:
+        system_id: 系统标识符（通常为系统名称）
+        description: 系统描述
+    """
+    try:
+        logger.info(f"通过 HTTP 创建计划: {system_id} - {description}")
+        
+        # 创建模拟的 PlanCreateMessage
+        from .protocol import PlanCreateMessage, MessageType
+        import uuid
+        
+        message = PlanCreateMessage(
+            message_type=MessageType.PLAN_CREATE,
+            source="http_client",
+            destination="server",
+            system_id=system_id,
+            description=description,
+            metadata={}
+        )
+        
+        # 获取数据库会话
+        from ..database.session import get_db_session
+        from ..core.planner import get_planner
+        
+        async for session in get_db_session():
+            # 获取 MCP 服务器实例
+            mcp_server = MCPServer()
+            
+            # 处理创建计划请求
+            response = await mcp_server.handle_plan_create(message, session)
+            
+            # 将响应转换为字典
+            response_dict = response.to_dict()
+            
+            return {
+                "success": True,
+                "message": "计划创建成功",
+                "data": response_dict.get("metadata", {}),
+                "response": response_dict
+            }
+            
+    except Exception as e:
+        logger.error(f"通过 HTTP 创建计划失败: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"创建计划失败: {str(e)}"
+        )
 
 
 @router.get("/executor/tasks")

@@ -239,11 +239,73 @@ curl -X POST "http://localhost:8000/api/v1/plans" \
 
 ### 认证和授权
 
-目前 API 使用简单的 API Key 认证：
+CodeMCP 支持可配置的 JWT（JSON Web Token）认证系统，通过环境变量 `AUTH_ENABLED` 控制是否启用认证。
+
+#### 认证开关
+
+在 `.env` 文件中配置：
 
 ```bash
-curl -H "X-API-Key: your-api-key" http://localhost:8000/api/v1/systems
+# 如果设置为 false，所有 API 都不需要认证
+# 如果设置为 true，需要 JWT 令牌认证
+AUTH_ENABLED=true
+
+# JWT 认证配置（当 AUTH_ENABLED=true 时生效）
+SECRET_KEY=codemcp-secret-key-change-in-production
+JWT_ALGORITHM=HS256
+
+# 初始管理员账户（当 AUTH_ENABLED=true 时生效）
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin123
+ADMIN_EMAIL=admin@example.com
 ```
+
+#### 启用认证时的使用方式
+
+1. **初始化管理员用户**：
+   ```bash
+   python scripts/init_admin.py
+   ```
+
+2. **获取访问令牌**：
+   ```bash
+   curl -X POST http://localhost:8000/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"username": "admin", "password": "admin123"}'
+   ```
+
+3. **使用令牌访问 API**：
+   ```bash
+   curl -H "Authorization: Bearer YOUR_JWT_TOKEN" http://localhost:8000/tasks/
+   ```
+
+#### 禁用认证时的使用方式
+
+当 `AUTH_ENABLED=false` 时，所有 API 都不需要认证：
+
+```bash
+# 直接访问 API，无需令牌
+curl http://localhost:8000/tasks/
+curl http://localhost:8000/auth/me
+```
+
+#### 认证 API 端点
+
+- `POST /auth/login` - 用户登录，获取 JWT 令牌
+- `POST /auth/register` - 用户注册（仅当认证启用时可用）
+- `POST /auth/logout` - 用户登出，撤销令牌
+- `POST /auth/logout/all` - 撤销用户的所有令牌
+- `GET /auth/me` - 获取当前用户信息
+- `PUT /auth/me` - 更新当前用户信息
+- `POST /auth/password/reset/request` - 请求密码重置
+- `POST /auth/password/reset/confirm` - 确认密码重置
+- `GET /auth/health` - 认证服务健康检查
+
+#### 令牌特性
+
+- **永不过期**：按照设计需求，JWT 令牌一旦设置永不过期
+- **可撤销**：通过数据库记录支持令牌撤销
+- **Bearer 格式**：使用标准的 `Authorization: Bearer <token>` 头
 
 ### 主要 API 端点
 

@@ -46,6 +46,17 @@ from .task import (
     TaskQueueRequest,
     TaskQueueResponse,
 )
+from .auth import (
+    Token,
+    TokenPayload,
+    UserLogin,
+    UserRegister,
+    UserResponse,
+    UserUpdate,
+    PasswordResetRequest,
+    PasswordResetConfirm,
+    LogoutRequest,
+)
 
 __all__ = [
     # 通用模型
@@ -85,4 +96,14 @@ __all__ = [
     "TestExecuteResponse",
     "TaskQueueRequest",
     "TaskQueueResponse",
+    # 认证模型
+    "Token",
+    "TokenPayload",
+    "UserLogin",
+    "UserRegister",
+    "UserResponse",
+    "UserUpdate",
+    "PasswordResetRequest",
+    "PasswordResetConfirm",
+    "LogoutRequest",
 ]

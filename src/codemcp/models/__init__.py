@@ -10,6 +10,7 @@ from .block import BlockModel, BlockStatus
 from .feature import FeatureModel, FeatureStatus
 from .test import TestModel, TestStatus
 from .task_queue import TaskQueueModel, QueueStatus
+from .user import User, RevokedToken
 
 __all__ = [
     # 基类和混合类
@@ -33,4 +34,7 @@ __all__ = [
     # 任务队列模型
     "TaskQueueModel",
     "QueueStatus",
+    # 用户认证模型
+    "User",
+    "RevokedToken",
 ]
