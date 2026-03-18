@@ -303,6 +303,107 @@ curl http://localhost:8000/auth/me
 - **一致性保证**：要么所有 API 都需要认证，要么都不需要
 - **向后兼容**：认证 API 在禁用时仍然可用
 
+## 📁 项目级配置
+
+CodeMCP 支持项目级配置文件，允许在不同项目中使用不同的配置。这对于多项目环境特别有用，每个项目可以有自己的认证配置、数据库连接等。
+
+### 配置文件优先级
+
+系统按照以下优先级顺序加载配置文件（后读取的覆盖先读取的）：
+
+1. **安装目录（CODEMCP_HOME）的 `.codemcp` 文件**（先读取）
+2. **当前工作目录的 `.codemcp` 文件**（后读取，可以覆盖安装目录的配置）
+3. **环境变量**
+4. **默认值**
+
+**注意**：pydantic-settings 会按顺序读取配置文件，后读取的文件会覆盖先读取的文件中的相同配置项。
+
+### 使用项目级配置
+
+1. **创建项目级配置文件**：
+   ```bash
+   # 从模板创建配置文件
+   cp .codemcp.example .codemcp
+   
+   # 编辑配置文件
+   nano .codemcp
+   ```
+
+2. **配置示例**：
+   ```bash
+   # .codemcp 配置文件示例
+   
+   # 认证配置
+   AUTH_ENABLED=true
+   SECRET_KEY=your-project-specific-secret-key
+   JWT_ALGORITHM=HS256
+   
+   # 数据库配置
+   DATABASE_URL=sqlite:///./project-specific.db
+   
+   # 服务器配置
+   HOST=0.0.0.0
+   PORT=8000
+   
+   # 任务执行配置
+   TASK_WINDOW_DEPTH=5
+   MAX_RETRY_COUNT=3
+   ```
+
+3. **CLI工具自动配置**：
+   - 当你在项目目录中运行 CLI 工具时，如果当前目录没有 `.codemcp` 文件，工具会自动从安装目录拷贝一个到当前目录
+   - 如果安装目录也没有配置文件，会创建一个包含默认值的配置文件
+
+### 环境变量设置
+
+为了支持项目级配置，需要设置 `CODEMCP_HOME` 环境变量指向安装目录：
+
+```bash
+# 在 ~/.bashrc 或 ~/.zshrc 中添加
+export CODEMCP_HOME="/path/to/CodeMCP/installation"
+
+# 或者在运行命令时临时设置
+CODEMCP_HOME="/path/to/CodeMCP/installation" codemcp status
+```
+
+### 配置覆盖示例
+
+假设有以下配置：
+
+1. **安装目录配置**（`/opt/codemcp/.codemcp`）：
+   ```bash
+   AUTH_ENABLED=true
+   SECRET_KEY=global-secret-key
+   DATABASE_URL=sqlite:///./global.db
+   PORT=8000
+   ```
+
+2. **项目目录配置**（`/home/user/myproject/.codemcp`）：
+   ```bash
+   AUTH_ENABLED=false
+   DATABASE_URL=sqlite:///./myproject.db
+   ```
+
+**最终生效的配置**：
+- `AUTH_ENABLED=false`（项目级配置覆盖全局配置）
+- `SECRET_KEY=global-secret-key`（使用全局配置，项目未覆盖）
+- `DATABASE_URL=sqlite:///./myproject.db`（项目级配置覆盖全局配置）
+- `PORT=8000`（使用全局配置，项目未覆盖）
+
+### 最佳实践
+
+1. **敏感信息管理**：
+   - 将 `.codemcp` 文件添加到 `.gitignore` 中，避免提交敏感信息
+   - 使用环境变量或密钥管理服务存储生产环境的密钥
+
+2. **团队协作**：
+   - 提供 `.codemcp.example` 模板文件，包含配置说明但不包含敏感信息
+   - 新成员可以通过复制模板快速配置
+
+3. **多环境支持**：
+   - 为开发、测试、生产环境创建不同的配置文件
+   - 使用环境变量切换配置文件
+
 ## 🌐 API 接口
 
 ### 主要端点

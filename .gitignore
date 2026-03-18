@@ -161,3 +161,8 @@ logs/
 # CodeMCP specific
 /codemcp.db
 /codemcp.db-journal
+
+# 设计文档 - 不提交到GitHub
+/doc/*.md
+!/doc/user_guide.md
+/plan/

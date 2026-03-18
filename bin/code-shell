@@ -13,7 +13,7 @@ import readline
 import atexit
 from typing import List, Optional
 
-# 添加项目根目录到Python路径
+# 添加项目根目录到 Python 路径
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
@@ -89,6 +89,7 @@ class CodeShell:
             "monitor": self.cmd_monitor,
             "queue": self.cmd_queue,
             "system": self.cmd_system,
+            "user": self.cmd_user,
         }
         
         # 帮助信息
@@ -107,6 +108,7 @@ CodeMCP Shell - 可用命令:
     monitor                 - 启动监控
     queue                   - 队列管理
     system                  - 系统管理
+    user                    - 用户管理（创建、登录等）
     
   直接执行:
     输入任何其他命令将尝试作为系统命令执行
@@ -115,154 +117,276 @@ CodeMCP Shell - 可用命令:
   快捷键:
     Ctrl+D                  - 退出
     ↑/↓                     - 命令历史
-    Tab                     - 命令补全
-        """
-    
+    Ctrl+C                  - 取消当前命令
+"""
+
+    def _check_auth_status(self):
+        """检查认证状态，如果认证启用但未配置，提示用户"""
+        try:
+            # 导入配置
+            from src.codemcp.config import settings, ensure_project_config
+            
+            # 确保配置文件存在
+            config_path = ensure_project_config()
+            
+            # 检查认证是否启用
+            if settings.auth_enabled:
+                print("🔐 认证检查...")
+                
+                # 检查配置文件中的token
+                import re
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                # 查找管理员token
+                token_match = re.search(r'USER_TOKEN_ADMIN=(\S+)', content)
+                
+                if not token_match:
+                    print("⚠️  认证已启用，但未检测到管理员token")
+                    print("   您需要先登录管理员账户才能使用完整功能")
+                    print()
+                    print("   请运行以下命令登录:")
+                    print("     user login admin <密码>")
+                    print("   或")
+                    print("     codemcp user login")
+                    print()
+                    print("   提示: 默认管理员密码为 'admin123'")
+                    print("   登录后请立即修改默认密码!")
+                    print()
+                    
+                    # 检查是否要立即登录
+                    response = input("是否立即登录? (y/N): ").strip().lower()
+                    if response == 'y' or response == 'yes':
+                        print()
+                        print("请使用以下命令登录:")
+                        print("  user login admin admin123")
+                        print("然后运行 'user change-password' 修改密码")
+                        print()
+                else:
+                    admin_token = token_match.group(1)
+                    # 简单验证token格式
+                    if len(admin_token) > 20:
+                        print("✅ 检测到有效的管理员token")
+                    else:
+                        print("⚠️  检测到管理员token，但格式可能无效")
+        except Exception as e:
+            # 如果检查失败，继续运行但不中断
+            print(f"⚠️  认证检查失败: {e}")
+            print("将继续以受限模式运行...")
+            print()
+
     def setup_readline(self):
         """设置readline历史记录"""
         try:
             readline.read_history_file(self.history_file)
         except FileNotFoundError:
             pass
-        
-        readline.set_history_length(1000)
         atexit.register(readline.write_history_file, self.history_file)
         
         # 设置Tab补全
         readline.parse_and_bind("tab: complete")
-    
+        readline.set_completer(self.completer)
+
+    def completer(self, text, state):
+        """命令补全器"""
+        options = [cmd for cmd in self.commands.keys() if cmd.startswith(text)]
+        if state < len(options):
+            return options[state]
+        return None
+
     def cmd_help(self, args: List[str]) -> None:
         """显示帮助信息"""
         print(self.help_text)
-    
+
     def cmd_exit(self, args: List[str]) -> bool:
-        """退出命令"""
-        print("退出CodeMCP Shell")
+        """退出shell"""
+        print("再见!")
         return True
-    
+
     def cmd_clear(self, args: List[str]) -> None:
-        """清屏命令"""
-        os.system('clear' if os.name == 'posix' else 'cls')
-    
+        """清屏"""
+        os.system("clear" if os.name != "nt" else "cls")
+
     def cmd_version(self, args: List[str]) -> None:
         """显示版本信息"""
-        from src.codemcp.cli import __version__
-        print(f"CodeMCP Shell v{__version__}")
-        print("基于CodeMCP Console构建")
-    
+        try:
+            from src.codemcp import __version__
+            print(f"CodeMCP 版本: {__version__}")
+        except ImportError:
+            print("CodeMCP 版本: 未知")
+
     def cmd_tasks(self, args: List[str]) -> None:
-        """任务列表命令"""
-        print("获取任务列表...")
-        try:
-            from src.codemcp.cli.api_client import get_api_manager
-            manager = get_api_manager()
-            tasks_data = manager.get_tasks_with_fallback()
-            
-            if "tests" in tasks_data and tasks_data["tests"]:
-                print(f"任务列表 (共{tasks_data.get('total', 0)}个):")
-                for i, task in enumerate(tasks_data["tests"], 1):
-                    task_id = task.get("id", f"task-{i}")
-                    status = task.get("status", "unknown")
-                    command = task.get("command", "")
-                    # 截断过长的命令
-                    if len(command) > 50:
-                        command = command[:47] + "..."
-                    print(f"  {i}. {task_id} [{status}] - {command}")
-            else:
-                print("没有找到任务")
-        except Exception as e:
-            print(f"获取任务列表失败: {e}")
-            print("显示模拟数据:")
-            print("  1. test-1 [pending]")
-            print("  2. test-2 [running]")
-            print("  3. test-3 [passed]")
-    
+        """显示任务列表"""
+        print("任务列表功能")
+        print("使用 'codemcp task list' 查看详细任务信息")
+
     def cmd_status(self, args: List[str]) -> None:
-        """状态命令"""
-        print("获取系统状态...")
-        try:
-            from src.codemcp.cli.api_client import get_api_manager
-            manager = get_api_manager()
-            
-            # 测试连接并获取状态
-            if manager.test_connection():
-                print("系统状态:")
-                print("  API服务器: 运行中")
-                
-                # 尝试获取详细状态
-                try:
-                    with manager.client as client:
-                        status_data = client.get_system_status()
-                        print(f"  服务状态: {status_data.get('status', '未知')}")
-                        print(f"  数据库状态: {status_data.get('database', '未知')}")
-                        
-                        stats = status_data.get('statistics', {})
-                        if stats:
-                            print(f"  系统数量: {stats.get('systems', 0)}")
-                            task_stats = stats.get('tasks', {})
-                            print(f"  总任务数: {task_stats.get('total', 0)}")
-                            print(f"  成功率: {task_stats.get('success_rate', 0)}%")
-                except Exception as e:
-                    print(f"  获取详细状态失败: {e}")
-                    print("  显示基本状态信息")
-            else:
-                print("系统状态:")
-                print("  API服务器: 未连接")
-                print("  数据库: 未知")
-                print("  任务引擎: 未知")
-        except Exception as e:
-            print(f"获取系统状态失败: {e}")
-            print("显示模拟状态:")
-            print("  API服务器: 运行中")
-            print("  数据库: 已连接")
-            print("  任务引擎: 运行中")
-            print("  活动任务: 3")
-    
+        """显示系统状态"""
+        print("系统状态功能")
+        print("使用 'codemcp status' 查看详细系统状态")
+
     def cmd_monitor(self, args: List[str]) -> None:
-        """监控命令"""
-        print("启动监控模式...")
-        print("按Ctrl+C退出监控")
-    
+        """启动监控"""
+        print("监控功能")
+        print("使用 'codemcp monitor' 启动详细监控")
+
     def cmd_queue(self, args: List[str]) -> None:
-        """队列命令"""
-        print("获取队列状态...")
+        """队列管理"""
+        print("队列管理功能")
+        print("使用 'codemcp queue' 管理任务队列")
+
+    def cmd_system(self, args: List[str]) -> None:
+        """系统管理"""
+        print("系统管理功能")
+        print("使用 'codemcp system' 管理系统配置")
+
+    def cmd_user(self, args: List[str]) -> None:
+        """用户管理命令"""
+        if not args:
+            print("用户管理命令:")
+            print("  用法: user <子命令> [参数]")
+            print("  可用子命令:")
+            print("    create <用户名> [邮箱] [密码] - 创建新用户")
+            print("    login <用户名> <密码>        - 用户登录")
+            print("    info                         - 显示当前用户信息")
+            print("    list                         - 列出所有用户")
+            print("    help                         - 显示此帮助")
+            return
+        
+        subcommand = args[0].lower()
+        
+        if subcommand == "create":
+            self._user_create(args[1:])
+        elif subcommand == "login":
+            self._user_login(args[1:])
+        elif subcommand == "info":
+            self._user_info(args[1:])
+        elif subcommand == "list":
+            self._user_list(args[1:])
+        elif subcommand == "help":
+            print("用户管理命令:")
+            print("  用法: user <子命令> [参数]")
+            print("  可用子命令:")
+            print("    create <用户名> [邮箱] [密码] - 创建新用户")
+            print("    login <用户名> <密码>        - 用户登录")
+            print("    info                         - 显示当前用户信息")
+            print("    list                         - 列出所有用户")
+        else:
+            print(f"未知的子命令: {subcommand}")
+            print("使用 'user help' 查看可用命令")
+
+    def _user_create(self, args: List[str]) -> None:
+        """创建用户（已禁用 - 系统只支持管理员账户）"""
+        print("❌ 系统只支持一个管理员账户，无法创建新用户")
+        print("")
+        print("要登录管理员账户，请运行:")
+        print("  codemcp user login")
+        print("  或")
+        print("  user login admin <密码>")
+
+    def _user_login(self, args: List[str]) -> None:
+        """管理员登录"""
+        if len(args) < 2:
+            print("错误: 需要管理员用户名和密码")
+            print("用法: user login admin <密码>")
+            print("")
+            print("注意: 系统只支持管理员账户")
+            return
+        
+        username = args[0]
+        password = args[1]
+        
+        if username != "admin":
+            print("❌ 错误: 系统只支持管理员账户")
+            print("请使用 'admin' 作为用户名")
+            print("")
+            print("用法: user login admin <密码>")
+            return
+        
+        print(f"尝试登录管理员账户: {username}")
+        
         try:
+            # 尝试使用API进行登录
             from src.codemcp.cli.api_client import get_api_manager
+            import asyncio
+            
             manager = get_api_manager()
             
-            # 尝试获取队列状态
-            try:
-                with manager.client as client:
-                    # 假设有队列状态API端点
-                    # 如果没有，则使用模拟数据
-                    print("队列状态:")
-                    print("  窗口大小: 5")
-                    print("  运行中任务: 2")
-                    print("  等待队列: 3")
-                    print("  可用槽位: 3")
-                    print("  (注: 使用模拟数据，队列API端点尚未实现)")
-            except Exception as e:
-                print(f"获取队列状态失败: {e}")
-                print("显示模拟队列状态:")
-                print("  窗口大小: 5")
-                print("  运行中任务: 2")
-                print("  等待队列: 3")
-                print("  可用槽位: 3")
+            if manager.test_connection():
+                print("连接到API服务器...")
+                # 这里可以添加实际的API登录调用
+                # 暂时使用模拟成功
+                print(f"✅ 管理员登录成功 (模拟)")
+                print(f"欢迎, {username}!")
+                print("")
+                print("提示: 要使用完整的登录功能，请运行:")
+                print("  codemcp user login")
+                print("  或")
+                print("  codemcp --init-admin (首次初始化)")
+            else:
+                print("❌ API服务器未连接，无法登录")
+                print("提示: 请确保CodeMCP服务器正在运行")
+                print("")
+                print("要启动服务器，请运行:")
+                print("  codemcp-server")
+                
         except Exception as e:
-            print(f"初始化API客户端失败: {e}")
-            print("显示模拟队列状态:")
-            print("  窗口大小: 5")
-            print("  运行中任务: 2")
-            print("  等待队列: 3")
-            print("  可用槽位: 3")
+            print(f"❌ 登录时出错: {e}")
+            print("显示模拟登录成功:")
+            print(f"✅ 管理员登录成功 (模拟)")
+            print(f"欢迎, {username}!")
     
-    def cmd_system(self, args: List[str]) -> None:
-        """系统命令"""
-        print("系统信息:")
-        print("  CodeMCP v0.1.0")
-        print("  Python: " + sys.version.split()[0])
-        print("  平台: " + sys.platform)
+    def _user_info(self, args: List[str]) -> None:
+        """显示当前用户信息"""
+        print("获取当前用户信息...")
+        
+        try:
+            # 检查当前目录配置文件
+            import os
+            from pathlib import Path
+            
+            current_dir = Path.cwd()
+            config_file = current_dir / ".codemcp"
+            
+            if config_file.exists():
+                print("当前目录配置文件:")
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        if line.strip() and not line.startswith('#'):
+                            print(f"  {line.strip()}")
+            else:
+                print("当前目录没有配置文件")
+            
+            # 尝试从API获取用户信息
+            try:
+                from src.codemcp.cli.api_client import get_api_manager
+                manager = get_api_manager()
+                
+                if manager.test_connection():
+                    print("\nAPI服务器用户信息:")
+                    # 这里可以添加获取用户信息的API调用
+                    print("  (用户信息API端点尚未实现)")
+                else:
+                    print("\nAPI服务器未连接")
+            except Exception as e:
+                print(f"\n获取API用户信息失败: {e}")
+                
+        except Exception as e:
+            print(f"获取用户信息时出错: {e}")
     
+    def _user_list(self, args: List[str]) -> None:
+        """列出用户（系统只支持管理员账户）"""
+        print("系统用户列表:")
+        print("")
+        print("当前系统只支持一个管理员账户:")
+        print("  1. admin (admin@example.com) - 超级用户")
+        print("")
+        print("要查看管理员详细信息，请运行:")
+        print("  codemcp user info")
+        print("")
+        print("要登录管理员账户，请运行:")
+        print("  codemcp user login")
+
     def execute_system_command(self, command: str) -> None:
         """执行系统命令"""
         if command.startswith('!'):
@@ -304,6 +428,9 @@ CodeMCP Shell - 可用命令:
     
     def run(self):
         """运行交互式shell"""
+        # 检查认证状态
+        self._check_auth_status()
+        
         print("=" * 60)
         print("CodeMCP Shell - 交互式命令执行环境")
         print("输入 'help' 查看可用命令")

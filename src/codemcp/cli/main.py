@@ -4,6 +4,7 @@ CodeMCP Console CLI 主入口
 Typer CLI 应用主入口点。
 """
 
+import asyncio
 import sys
 from typing import Optional
 
@@ -33,6 +34,64 @@ def version_callback(value: bool):
         raise typer.Exit()
 
 
+async def _ensure_admin_user_exists():
+    """确保管理员用户存在，如果不存在则创建"""
+    try:
+        # 导入必要的模块
+        from ..database.session import AsyncSessionFactory, init_db
+        from ..models.user import User
+        from ..utils.password import get_password_hash
+        from sqlalchemy import select
+        
+        # 创建数据库表
+        await init_db()
+        
+        # 检查是否已存在管理员用户
+        async with AsyncSessionFactory() as db:
+            result = await db.execute(
+                select(User).where(User.username == settings.admin_username)
+            )
+            existing_admin = result.scalar_one_or_none()
+            
+            if existing_admin:
+                console.print(f"[dim]管理员用户 '{settings.admin_username}' 已存在[/dim]")
+                return existing_admin
+            
+            # 创建管理员用户
+            hashed_password = get_password_hash(settings.admin_password)
+            admin_user = User(
+                username=settings.admin_username,
+                email=settings.admin_email,
+                hashed_password=hashed_password,
+                is_active=True,
+                is_superuser=True
+            )
+            
+            db.add(admin_user)
+            await db.commit()
+            await db.refresh(admin_user)
+            
+            console.print(f"[bold green]✅ 管理员用户创建成功![/bold green]")
+            console.print(f"[dim]用户名: {admin_user.username}[/dim]")
+            console.print(f"[dim]邮箱: {admin_user.email}[/dim]")
+            console.print(f"[bold yellow]⚠️  重要提示: 请立即修改默认密码![/bold yellow]")
+            console.print(f"[dim]默认密码: {settings.admin_password}[/dim]")
+            
+            return admin_user
+    except Exception as e:
+        console.print(f"[bold red]❌ 管理员用户初始化失败: {e}[/bold red]")
+        return None
+
+
+def _run_admin_initialization():
+    """运行管理员初始化（同步包装器）"""
+    try:
+        return asyncio.run(_ensure_admin_user_exists())
+    except Exception as e:
+        console.print(f"[bold red]❌ 管理员初始化失败: {e}[/bold red]")
+        return None
+
+
 @app.callback()
 def main(
     ctx: typer.Context,
@@ -44,6 +103,11 @@ def main(
         callback=version_callback,
         is_eager=True,
     ),
+    init_admin: bool = typer.Option(
+        False,
+        "--init-admin",
+        help="初始化管理员用户（如果不存在）",
+    ),
 ):
     """
     CodeMCP Console - AI协同编排与执行服务器的交互式控制台
@@ -51,6 +115,38 @@ def main(
     使用子命令管理任务、监控状态和配置系统。
     如果没有提供子命令，将启动交互式控制台。
     """
+    # 确保项目级配置文件存在
+    try:
+        from ..config import ensure_project_config
+        config_path = ensure_project_config()
+        # 可以在这里添加日志，但为了简洁，暂时不显示
+    except Exception as e:
+        # 如果配置检查失败，继续执行但不中断
+        pass
+    
+    # 检查并初始化管理员用户（如果启用了认证）
+    if settings.auth_enabled:
+        if init_admin:
+            console.print("[bold yellow]正在初始化管理员用户...[/bold yellow]")
+            admin_user = _run_admin_initialization()
+            if admin_user:
+                console.print("[bold green]✅ 管理员用户初始化完成[/bold green]")
+            else:
+                console.print("[bold red]❌ 管理员用户初始化失败[/bold red]")
+        else:
+            # 静默检查管理员用户是否存在，如果不存在则创建
+            try:
+                admin_user = _run_admin_initialization()
+                if admin_user:
+                    # 如果是新创建的管理员用户，提示修改密码
+                    console.print("[bold yellow]⚠️  检测到新创建的管理员用户，请立即修改默认密码![/bold yellow]")
+                    console.print(f"[dim]用户名: {settings.admin_username}[/dim]")
+                    console.print(f"[dim]默认密码: {settings.admin_password}[/dim]")
+                    console.print("[dim]使用 'codemcp user login' 登录后修改密码[/dim]")
+            except Exception:
+                # 初始化失败不影响主流程
+                pass
+    
     # 如果没有提供子命令，启动交互式控制台
     if ctx.invoked_subcommand is None:
         from .console import run_console
@@ -197,6 +293,7 @@ try:
     from .commands import status as status_commands
     from .commands import system as system_commands
     from .commands import task as task_commands
+    from .commands import user as user_commands
 
     # 添加子命令
     app.add_typer(
@@ -223,6 +320,11 @@ try:
         task_commands.app,
         name="task",
         help="任务管理命令",
+    )
+    app.add_typer(
+        user_commands.app,
+        name="user",
+        help="用户管理命令",
     )
 except ImportError:
     # 子命令模块尚未实现

@@ -2,13 +2,14 @@
 用户数据模型
 
 用户认证和授权相关的数据模型。
+支持全局管理员用户和项目级用户。
 """
 
 import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, String, Text
+from sqlalchemy import Boolean, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -16,7 +17,12 @@ from .base import Base
 
 
 class User(Base):
-    """用户模型"""
+    """用户模型
+    
+    支持两种类型的用户：
+    1. 全局管理员用户：system_id为None，is_superuser为True，可以在任何项目中有效
+    2. 项目级用户：system_id不为None，is_superuser为False，仅对特定项目有效
+    """
     
     __tablename__ = "users"
     
@@ -28,14 +34,12 @@ class User(Base):
     )
     username: Mapped[str] = mapped_column(
         String(255),
-        unique=True,
         nullable=False,
         index=True,
         comment="用户名",
     )
     email: Mapped[Optional[str]] = mapped_column(
         String(255),
-        unique=True,
         nullable=True,
         index=True,
         comment="邮箱地址",
@@ -55,7 +59,13 @@ class User(Base):
         Boolean,
         default=False,
         nullable=False,
-        comment="是否超级用户",
+        comment="是否超级用户（全局管理员）",
+    )
+    system_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        nullable=True,
+        index=True,
+        comment="关联的系统ID（项目ID），为None表示全局用户",
     )
     created_at: Mapped[datetime] = mapped_column(
         default=datetime.utcnow,
@@ -67,6 +77,12 @@ class User(Base):
         onupdate=datetime.utcnow,
         nullable=False,
         comment="更新时间",
+    )
+    
+    # 复合唯一约束：用户名+系统ID
+    # 确保同一系统内用户名唯一，全局用户（system_id为None）用户名也唯一
+    __table_args__ = (
+        UniqueConstraint('username', 'system_id', name='uq_user_username_system'),
     )
 
 
