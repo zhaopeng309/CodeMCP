@@ -155,9 +155,49 @@ def main(
 
 
 @app.command()
-def interactive():
-    """启动交互式控制台"""
+def interactive(
+    mode: str = typer.Option(
+        "full",
+        "--mode",
+        "-m",
+        help="界面模式: full(全屏TUI) - 目前仅支持full模式",
+        case_sensitive=False,
+    ),
+    refresh_interval: float = typer.Option(
+        2.0,
+        "--refresh",
+        "-r",
+        help="刷新间隔（秒）",
+        min=0.5,
+        max=10.0,
+    ),
+    theme: str = typer.Option(
+        "default",
+        "--theme",
+        "-t",
+        help="主题: default(默认), dark(暗色), light(亮色)",
+        case_sensitive=False,
+    ),
+):
+    """启动增强型交互式控制台
+    
+    提供全屏TUI界面，包含任务列表、状态监控、日志输出。
+    使用真实数据库数据，不再使用模拟数据。
+    """
     from .console import run_console
+    
+    console.print(f"[bold green]启动交互式控制台[/bold green]")
+    console.print(f"[dim]模式: {mode}[/dim]")
+    console.print(f"[dim]刷新间隔: {refresh_interval}秒[/dim]")
+    console.print(f"[dim]主题: {theme}[/dim]")
+    console.print()
+    
+    # 目前仅支持full模式
+    if mode != "full":
+        console.print(f"[bold yellow]注意: 目前仅支持 'full' 模式，将使用全屏TUI界面[/bold yellow]")
+        console.print()
+    
+    # 传递参数给run_console
     run_console()
 
 

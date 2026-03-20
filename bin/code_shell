@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+
+# CodeMCP 交互式控制台包装器
+#
+# 专门用于启动 CodeMCP 交互式 TUI 界面。
+# 自动处理环境配置、虚拟环境激活和依赖检查。
+
+# 获取脚本所在目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# 设置 CODEMCP_HOME 环境变量（如果未设置）
+if [ -z "$CODEMCP_HOME" ]; then
+    export CODEMCP_HOME="$PROJECT_ROOT"
+    echo "设置 CODEMCP_HOME 环境变量: $CODEMCP_HOME"
+    echo "提示: 您可以将此设置添加到 shell 配置文件中:"
+    echo "  export CODEMCP_HOME=\"$PROJECT_ROOT\""
+    echo ""
+fi
+
+# 检查虚拟环境是否存在
+VENV_PATH="$PROJECT_ROOT/venv"
+if [ -d "$VENV_PATH" ]; then
+    # 激活虚拟环境
+    source "$VENV_PATH/bin/activate"
+    echo "✓ 虚拟环境已激活"
+else
+    echo "❌ 错误: 虚拟环境不存在于 $VENV_PATH"
+    echo ""
+    echo "请执行以下步骤:"
+    echo "  1. 创建虚拟环境:"
+    echo "     cd \"$PROJECT_ROOT\" && python3 -m venv venv"
+    echo "  2. 激活虚拟环境:"
+    echo "     source \"$VENV_PATH/bin/activate\""
+    echo "  3. 安装依赖:"
+    echo "     pip install -e ."
+    echo ""
+    echo "或者直接运行:"
+    echo "  ./bin/codemcp-dev setup"
+    echo ""
+    exit 1
+fi
+
+# 检查必要的 Python 包
+echo "检查依赖包..."
+MISSING_DEPS=()
+
+check_dependency() {
+    python3 -c "import $1" 2>/dev/null
+    if [ $? -ne 0 ]; then
+        MISSING_DEPS+=("$1")
+    fi
+}
+
+# 检查核心依赖
+check_dependency "prompt_toolkit"
+check_dependency "sqlalchemy"
+check_dependency "typer"
+check_dependency "rich"
+
+if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
+    echo "❌ 缺少以下依赖包: ${MISSING_DEPS[*]}"
+    echo ""
+    echo "请安装缺失的依赖:"
+    echo "  pip install ${MISSING_DEPS[*]}"
+    echo ""
+    echo "或者安装所有依赖:"
+    echo "  pip install -e ."
+    echo ""
+    exit 1
+else
+    echo "✓ 所有依赖包已安装"
+fi
+
+# 检查数据库是否已初始化
+DB_FILE="$PROJECT_ROOT/codemcp.db"
+if [ ! -f "$DB_FILE" ]; then
+    echo "⚠️  数据库文件不存在: $DB_FILE"
+    echo "正在尝试初始化数据库..."
+    
+    # 尝试初始化数据库
+    cd "$PROJECT_ROOT"
+    if python3 -m src.codemcp.cli.main --init-admin 2>/dev/null; then
+        echo "✓ 数据库初始化成功"
+    else
+        echo "❌ 数据库初始化失败"
+        echo "请手动初始化数据库:"
+        echo "  ./bin/codemcp-db init"
+        echo ""
+        # 继续执行，因为数据库可能会在运行时自动创建
+    fi
+fi
+
+# 显示欢迎信息
+echo ""
+echo "========================================"
+echo "  CodeMCP 交互式控制台"
+echo "========================================"
+echo "项目根目录: $PROJECT_ROOT"
+echo "数据库文件: ${DB_FILE:-未找到}"
+echo "虚拟环境: $VENV_PATH"
+echo "========================================"
+echo ""
+
+# 检查是否有参数传递
+if [ $# -eq 0 ]; then
+    # 无参数，启动默认的交互式界面
+    echo "启动交互式 TUI 界面..."
+    echo "按 Ctrl+C 或输入 'exit' 退出"
+    echo ""
+    cd "$PROJECT_ROOT"
+    exec python3 -m src.codemcp.cli.main interactive "$@"
+else
+    # 有参数，传递给 interactive 命令
+    cd "$PROJECT_ROOT"
+    exec python3 -m src.codemcp.cli.main interactive "$@"
+fi
